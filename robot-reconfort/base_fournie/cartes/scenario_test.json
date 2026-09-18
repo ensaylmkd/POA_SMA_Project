@@ -1,0 +1,14 @@
+{
+  "format": "robot-reconfort/scenario",
+  "version": 1,
+  "nom": "scenario_test",
+  "carte": "appartement_test",
+  "armoire": "armoire_test",
+  "demandes": [
+    {
+      "numero": 1,
+      "resident": "R1",
+      "message": "Oh! Quel robot étrange."
+    }
+  ]
+}
