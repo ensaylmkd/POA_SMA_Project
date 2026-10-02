@@ -125,6 +125,8 @@ def charger_scenario(chemin: str | Path) -> Dict[str, Any]:
     """Charge un fichier scenario. Voir l'enonce, section 5.4."""
     return _lire_json(chemin, "robot-reconfort/scenario")
 
+def charger_trace(chemin: str | Path) -> Dict[str, Any]:
+    return _lire_json(chemin, "robot-reconfort/trace")
 
 # ---------------------------------------------------------------------------
 # Normalisation des messages
