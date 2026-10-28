@@ -9,17 +9,25 @@ class Environment:
 
         self.grid = [list(ligne) for ligne in self.carte['grille']]
 
+        self.casiers = [[None for _ in range(8)] for _ in range(3)]
+        for elt in self.armoire["casiers"]:
+            self.casiers[elt["ligne"]][elt["colonne"]] = {key: val for key, val in elt.items() if key not in ("ligne", "colonne")}
+
         self.agents = []
-        self.agentsPos = []
+        self.agentsPosTerrain = []
+        self.agentsPosCasier = []
 
         self._initAgent()
 
     def _initAgent(self):
         # for i in range(len(self.carte['depart_robot'])):
             # self.agents.append(AgentExemple(self,i))
-            # self.agentsPos.append(self.carte['depart_robot'][i])
+            # self.agentsPosTerrain.append(self.carte['depart_robot'][i])
+            # self.agentsPosCasier.append(self.armoire["casier_depart"][i])
+
         self.agents.append(AgentExemple(self,0))
-        self.agentsPos.append(self.carte['depart_robot'])
+        self.agentsPosTerrain.append(self.carte['depart_robot'])
+        self.agentsPosCasier.append(self.armoire["casier_depart"])
 
 
     # Ce que voit le robot au depart : sa position, celle de l'armoire, celle
@@ -34,17 +42,26 @@ class Environment:
         departRobot   : [6, 1]
         armoire        : [6, 4]
         dictionnaire   : [7, 6]
-        casier depart  : [1, 0] 
+        casier depart  : [1, 0]
+        residents : [{'id': 'R1', 'nom': 'Camille', 'position': [6, 11]}, {'id': 'R2', 'nom': 'Hugo', 'position': [3, 3]}]
         """
         return {"departRobot": self.carte['depart_robot'], 
                 "armoirePos": self.carte['armoire']['position'],
                 "dictionnairePos": self.carte['dictionnaire']['position'],
-                "departCasier": self.armoire['casier_depart']
+                "departCasier": self.armoire['casier_depart'],
+                "residents": self.carte["residents"]
                  }
         
-    def get_perception(self,id):
+    def get_perception(self,IDAgent):
+        """return la perception de l'agent numero id
+        exemple:
+        {'perception': {'N': '.', 'S': '.', 'E': '.', 'O': '#'}, 
+        'contenu_casier': {'emotion': 'joie', 'intensite': 'moyenne', 'objet': 'photo de famille'}, 
+        'posTerrain': [6, 1], 
+        'posCasier': [1, 0]}
+        """
         hauteur,largeur = self.carte["dimensions"].values()
-        x,y = self.agentsPos[id]
+        x,y = self.agentsPosTerrain[IDAgent]
         if (x >= hauteur and x > 0) or (y >= largeur and y > 0) :
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
@@ -52,10 +69,19 @@ class Environment:
         S = self.grid[x+1][y]
         E = self.grid[x][y+1]
         O = self.grid[x][y-1]
-        return{ "N":N, 
-                "S":S, 
-                "E":E,
-                "O":O }
+
+        x,y = self.agentsPosCasier[IDAgent]
+        if (x >= 3 and x > 0) or (y >= 8 and y > 0) :
+            print("[ENVIRONMENT][get_perception][error] x or y out of range")
+            return None
+        item = self.casiers[x][y]
+
+        return {
+            'perception':{ "N":N, "S":S, "E":E,"O":O },
+            'contenu_casier': item,
+            'posTerrain': self.agentsPosTerrain[IDAgent],
+            'posCasier': self.agentsPosCasier[IDAgent],
+        }
     
     def get_agentsActions(self):
         return [a.nextMove for a in self.agents]
@@ -80,10 +106,10 @@ class Environment:
             return res
 
         movement = _parseAction2Vec(action)
-        x,y = self.agentsPos[idAgent]
+        x,y = self.agentsPosTerrain[idAgent]
         new_x, new_y = movement[0] + x , movement[1] + y 
         if self.grid[new_x][new_y] == ".":
-            self.agentsPos[idAgent] = [new_x,new_y]
+            self.agentsPosTerrain[idAgent] = [new_x,new_y]
             
             self.grid[new_x][new_y] = self.grid[x][y]
             self.grid[x][y] = '.'

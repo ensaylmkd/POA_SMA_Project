@@ -44,6 +44,8 @@ def main(argv):
 
     print(env.get_perception(0))
 
+    print(env.casiers)
+
     def printMap():
         print("carte")
 
