@@ -9,7 +9,7 @@ import reconfort_io as rio
 
 NB_INTENSITES = 3
 TAILLE_CASE_AFFICHAGE = 30
-DELAI_AFFICHAGE = 20
+DELAI_AFFICHAGE = 50
 
 # Couleurs de la carte
 COULEURS = {
@@ -80,7 +80,7 @@ def updateMap(position, perception, map):
 
     return map, perçues
 
-def drawMap(canvas, map, perçues):
+def drawMap(canvas, map, perçues, resident):
     canvas.delete("all")
 
     height = len(map)
@@ -115,6 +115,18 @@ def drawMap(canvas, map, perçues):
                     fill="#ffffff"
                 )
 
+            if case == 'P':
+                for res in resident:
+                    if res['position'] == [r, c]:
+                        canvas.create_text(
+                            (x1 + x2) // 2,
+                            (y1 + y2) // 2,
+                            text=res['id'],
+                            font=("Arial", 12, "bold"),
+                            fill="#ffffff"
+                        )
+                        break
+
 #######################################################
 ######################  ARMOIRE  ######################
 #######################################################
@@ -127,12 +139,19 @@ def initMapArmoire(emotions):
     return map_armoire
 
 
-def updateMapArmoire(casier, map_armoire, casiers):
-    intensite, emotion = casier
+def updateMapArmoire(coord_casier, map_armoire, contenucasiers):
+    intensite, emotion = coord_casier
 
-    map_armoire[intensite][emotion] = casiers[intensite * len(map_armoire[0]) + emotion]['objet']
+    map_armoire[intensite][emotion] = contenucasiers
 
-    return map_armoire, casier
+    return map_armoire
+
+def prendreMapArmoire(coord_casier, map_armoire):
+    intensite, emotion = coord_casier
+
+    map_armoire[intensite][emotion] = ''
+    
+    return map_armoire
 
 
 def drawMapArmoire(canvas, map_armoire, emotions, perçues):
@@ -300,6 +319,7 @@ def main(argv):
 
     map = initMap(carte['grille'])
     map_armoire = initMapArmoire(armoire['emotions'])
+    resident = carte['residents']
 
     root, canvas, canvas_armoire, label_pas, label_liv = initDrawing(trace, map, armoire['emotions'])
 
@@ -312,24 +332,29 @@ def main(argv):
         p += 1
         label_pas.config(text=f"Pas {p} / {len(trace['pas'])}")
 
-        if "action" in step and step["action"] == "CHERCHER":
-            if not dans_armoire:
-                canvas.pack_forget()
-                canvas_armoire.pack(side="right", padx=10, pady=10)
-                dans_armoire = True
-
-            map_armoire, perçues_armoire = updateMapArmoire(step["casier"],map_armoire, armoire['casiers'])
-
-            drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], perçues_armoire)
+        if "action" in step and step["action"] == "CHERCHER" and not dans_armoire:
+            canvas.pack_forget()
+            canvas_armoire.pack(side="right", padx=10, pady=10)
+            dans_armoire = True
 
         elif "action" in step and step["action"] == "PRENDRE" and dans_armoire:
+            map_armoire = prendreMapArmoire(step["casier"],map_armoire)
+            drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+
+            root.update()
+            root.after(DELAI_AFFICHAGE * 10)
+
             canvas_armoire.pack_forget()
             canvas.pack(side="left", padx=10, pady=10)
             dans_armoire = False
             
         else:
-            map, perçues = updateMap(step['position'], step['perception'], map)
-            drawMap(canvas, map, perçues)
+            if dans_armoire:
+                map_armoire = updateMapArmoire(step['casier'], map_armoire, step['contenu_casier'])
+                drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+            else:
+                map, perçues = updateMap(step['position'], step['perception'], map)
+                drawMap(canvas, map, perçues, resident)
 
         root.update()
         root.after(DELAI_AFFICHAGE)
