@@ -37,7 +37,7 @@ def findEmotionIntensite(messageNorm):
     for elt in messageNorm:
         for ent in dico['entrees']:
             if elt in ent['formes']:
-                return ent['intensite'], ent['emotion']
+                return elt, ent['intensite'], ent['emotion']
 
 
 #######################################################
@@ -65,8 +65,8 @@ def main(argv):
     eilist = []
     for d in scenario["demandes"]:
         messageNorm = normaliser(d['message'])
-        intensite, emotion = findEmotionIntensite(messageNorm)
-        print(intensite, emotion)
+        mot, intensite, emotion = findEmotionIntensite(messageNorm)
+        print(mot, ' :', intensite, emotion)
 
     return 0
 
