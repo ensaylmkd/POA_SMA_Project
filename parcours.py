@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import sys
-from pathlib import P
+from pathlib import Path
 from collections import deque
 import reconfort_io as rio
 
 class Arbre:
     def __init__(self, valeur,  pere=None):
-        self.valeur = valeur
+        self.valeur = valeur #(x,y)
         self.pere = pere
 
 
@@ -15,47 +15,55 @@ def deplacement(pos_dep, pos_but, map) :
     """Pour aller d'une pos_initiale a une pos_but a l'aide d'un parcours en largeur qui calcule le chemin optimal a l'aide de la map (mentale du robot)"""
     f = deque()
     tab_marquage = []
-    f.append(pos_dep)
     tab_marquage.append(pos_dep)
     racine = Arbre(pos_dep)
+    f.append(racine)
     but = False
     while f and but == False:
-        pos = f.popleft()
+        arb_cour = f.popleft()
+        pos = arb_cour.valeur
         v_g = (pos[0], pos[1]-1)
         v_d = (pos[0], pos[1]+1)
         v_h = (pos[0]-1, pos[1])
         v_b = (pos[0]+1, pos[1])
-        if (map[v_g[0]][v_g[1]] == "."):#si on peut se deplacer alors on ajoute a l'arbre et a la file 
-            abg = Arbre(v_g, pos)
+        if (map[v_g[0]][v_g[1]] == "." and v_g not in tab_marquage):#si on peut se deplacer alors on ajoute a l'arbre et a la file 
+            tab_marquage.append(v_g)
+            abg = Arbre(v_g, arb_cour)
             f.append(abg)
-        if (map[v_d[0]][v_d[1]] == "."):
-            abd = Arbre(v_d, pos)
+            if (v_g == pos_but):
+                        ab_but = abg
+                        but = True
+        if (map[v_d[0]][v_d[1]] == "." and v_d not in tab_marquage):
+            tab_marquage.append(v_d)
+            abd = Arbre(v_d, arb_cour)
             f.append(abd)
-        if (map[v_h[0]][v_h[1]] == "."):
-            abh = Arbre(v_h, pos)
+            if (v_d == pos_but):
+                        ab_but = abd
+                        but = True
+        if (map[v_h[0]][v_h[1]] == "." and v_h not in tab_marquage):
+            tab_marquage.append(v_h)
+            abh = Arbre(v_h, arb_cour)
             f.append(abh)
-        if (map[v_b[0]][v_b[1]] == "."):
-            abb = Arbre(v_b, pos)
+            if (v_h == pos_but):
+                        ab_but = abh
+                        but = True
+        if (map[v_b[0]][v_b[1]] == "." and v_b not in tab_marquage):
+            tab_marquage.append(v_b)
+            abb = Arbre(v_b, arb_cour)
             f.append(abb)
-        if (v_g == pos_but):
-            ab_but = abg
-            but = True
-        if (v_d == pos_but):
-            ab_but = abd
-            but = True
-        if (v_h == pos_but):
-            ab_but = abh
-            but = True  
-        if (v_b == pos_but):
-            ab_but = abb
-            but = True
-    #On trouve le chemin
-    p = ab_but.pere
+            if (v_b == pos_but):
+                        ab_but = abb
+                        but = True   
+    #On trouve pas le chemin
+    if but == False:
+        return []
+    #on trouve le chemin 
+    p = ab_but
     chemin = []
-    chemin.append(ab_but.valeur)
-    while p.valeur != None :
+    while p != None :
         chemin.append(p.valeur)
         p = p.pere
+    chemin.reverse()#Le chemin est en sens inverse donc on utilise reverse pour avoir chemin[0] = pos_dep et chemin[n] = pos_but
     return chemin
 
 def parcours_map(pos_dep, map, pile) :
@@ -73,7 +81,7 @@ def parcours_map(pos_dep, map, pile) :
             v_b = (pos[0]+1, pos[1])
             #interroger environnement sur les voisins :
             if (v_g not in tab_marquage) :
-                #interroger sur nature de v_g (murs etc)
+                #interroger sur nature de v_g (murs etc) <- faut récup une string dans une variable qui sert pour la ligne d'après
                 map[v_g[0]][v_g[1]] = "."#ou le retour genre '#' si mur, 'D' si dico etc
                 if (map[v_g[0]][v_g[1]] == "."):
                     pile.append(v_g)
