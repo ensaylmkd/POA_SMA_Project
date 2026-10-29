@@ -1,3 +1,5 @@
+from src.agentExemple import *
+
 class Environment:
     def __init__(self, carte, scenario, dictionnaire, armoire):
         self.carte = carte
@@ -5,41 +7,149 @@ class Environment:
         self.dictionnaire = dictionnaire
         self.armoire = armoire
 
-        self.agent = []
-    
+        self.grid = [list(ligne) for ligne in self.carte['grille']]
+
+        self.casiers = [[None for _ in range(8)] for _ in range(3)]
+        for elt in self.armoire["casiers"]:
+            self.casiers[elt["ligne"]][elt["colonne"]] = {key: val for key, val in elt.items() if key not in ("ligne", "colonne")}
+
+        self.agents = []
+        self.agentsPosTerrain = []
+        self.agentsPosCasier = []
+
+        self._initAgent()
+
+    def _initAgent(self):
+        # for i in range(len(self.carte['depart_robot'])):
+            # self.agents.append(AgentExemple(self,i))
+            # self.agentsPosTerrain.append(self.carte['depart_robot'][i])
+            # self.agentsPosCasier.append(self.armoire["casier_depart"][i])
+
+        self.agents.append(AgentExemple(self,0))
+        self.agentsPosTerrain.append(self.carte['depart_robot'])
+        self.agentsPosCasier.append(self.armoire["casier_depart"])
+
 
     # Ce que voit le robot au depart : sa position, celle de l'armoire, celle
     # du dictionnaire, et celles des residents. Les murs, eux, ne sont PAS
     # connus a priori, et le contenu des casiers non plus (enonce 3.2 et 3.3).
     # Ne lisez ni carte["grille"], ni le champ "objet" des casiers : votre
     # agent n'y a pas droit.
+    
+    # ================ Communication [Agent <=> Environment] =====================
     def get_initAgent_info(self):
         """ Exemple :
         departRobot   : [6, 1]
         armoire        : [6, 4]
         dictionnaire   : [7, 6]
-        casier depart  : [1, 0] 
+        casier depart  : [1, 0]
+        residents : [{'id': 'R1', 'nom': 'Camille', 'position': [6, 11]}, {'id': 'R2', 'nom': 'Hugo', 'position': [3, 3]}]
         """
         return {"departRobot": self.carte['depart_robot'], 
                 "armoirePos": self.carte['armoire']['position'],
                 "dictionnairePos": self.carte['dictionnaire']['position'],
-                "departCasier": self.armoire['casier_depart']
+                "departCasier": self.armoire['casier_depart'],
+                "residents": self.carte["residents"]
                  }
         
-    def get_perception(self,x,y):
+    def get_perception(self,IDAgent):
+        """return la perception de l'agent numero id
+        exemple:
+        {'perception': {'N': '.', 'S': '.', 'E': '.', 'O': '#'}, 
+        'contenu_casier': {'emotion': 'joie', 'intensite': 'moyenne', 'objet': 'photo de famille'}, 
+        'posTerrain': [6, 1], 
+        'posCasier': [1, 0]}
+        """
         hauteur,largeur = self.carte["dimensions"].values()
+        x,y = self.agentsPosTerrain[IDAgent]
         if (x >= hauteur and x > 0) or (y >= largeur and y > 0) :
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
-        N = self.carte["grille"][x-1][y]
-        S = self.carte["grille"][x+1][y]
-        E = self.carte["grille"][x][y+1]
-        O = self.carte["grille"][x][y-1]
-        return{ "N":N, 
-                "S":S, 
-                "E":E,
-                "O":O }
+        N = self.grid[x-1][y]
+        S = self.grid[x+1][y]
+        E = self.grid[x][y+1]
+        O = self.grid[x][y-1]
 
+        x,y = self.agentsPosCasier[IDAgent]
+        if (x >= 3 and x > 0) or (y >= 8 and y > 0) :
+            print("[ENVIRONMENT][get_perception][error] x or y out of range")
+            return None
+        item = self.casiers[x][y]
+
+        return {
+            'perception':{ "N":N, "S":S, "E":E,"O":O },
+            'contenu_casier': item,
+            'posTerrain': self.agentsPosTerrain[IDAgent],
+            'posCasier': self.agentsPosCasier[IDAgent],
+        }
+    
+    def get_agentsActions(self):
+        return [a.nextMove for a in self.agents]
+
+    #================ Action logique ================
+    def moveAgent(self,idAgent,action):
+        def _parseAction2Vec(action):
+            res = (0,0)
+            match action.upper():
+                case "HAUT":
+                    res = (-1,0)
+                case "BAS":
+                    res = (1,0)
+                case "GAUCHE":
+                    res = (0,-1)
+                case "DROITE":
+                    res = (0,1)
+                case "RIEN":
+                    pass
+                case _:
+                    print("[moveAgent_Parser]",action," n'est pas une action possible")
+            return res
+
+        movement = _parseAction2Vec(action)
+        x,y = self.agentsPosTerrain[idAgent]
+        new_x, new_y = movement[0] + x , movement[1] + y 
+        if self.grid[new_x][new_y] == ".":
+            self.agentsPosTerrain[idAgent] = [new_x,new_y]
+            
+            self.grid[new_x][new_y] = self.grid[x][y]
+            self.grid[x][y] = '.'
+        else:
+            print("[MoveAgent] BONK!! l'agent id", idAgent ," a taper dans quelque chose")
+
+    def _handleAction(self,id,action):
+        match action[0].upper():
+            case "AVANCER":
+                self.moveAgent(id,action[1])
+            case "CONSULTER":
+                pass
+            case "CHERCHER":
+                pass
+            case "PRENDRE":
+                pass
+            case "DONNER":
+                pass
+            case "ATTENDRE":
+                pass
+            case _:
+                print("[Env.HandleAction] Bah ça existe pas ", action[0], "mdr")
+
+    def makeAgentNextMove(self):            
+        actions = self.get_agentsActions()
+        for i in range(len(actions)):
+            self._handleAction(i,actions[i])
+        print("[MakeAgentNextMove] ActionsAgents :", actions)
+
+ #===================================================================
+
+ #================ Main Script =====================
+    def timeStep(self):
+        for a in self.agents:
+            a.updateState()
+            a.compute_NextMove()
+
+        self.makeAgentNextMove()
+
+#==================================================
 
 
     def __str__(self):
