@@ -6,8 +6,15 @@ class AgentExemple:
         self.carte_mental = []
         self.armoire_mental = []
         
-        self.nextMove = "ATTENDRE"
+        self.nextMove = ["CHERCHER","DROITE"]
+        
+        # Variable de test Env._handleAction
+        self.futurNextMove = [
+            ["CHERCHER","DROITE"],
+            ["Prendre",None]
+        ]
 
+        self.i = 0
         self.infoDeBase = environment.get_initAgent_info()
     
     def updateState(self):
@@ -17,4 +24,5 @@ class AgentExemple:
 
     def compute_NextMove(self):
         """met à jour nextMove selon état et position actuel"""
-        self.nextMove = ["AVANCER","DROITE"]
+        self.nextMove = self.futurNextMove[self.i]
+        self.i = (self.i + 1) % 2 

@@ -53,7 +53,7 @@ def main(argv):
             print(env.grid[i])
 
     printMap()
-    for i in range(5):
+    for i in range(4):
         env.timeStep()
         printMap()
 
