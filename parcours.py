@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 from collections import deque
+from Environment import *
+from src.agentExemple import *
 
 class Arbre:
     def __init__(self, valeur,  pere=None):
         self.valeur = valeur #(x,y)
         self.pere = pere
 
-
 def deplacement(pos_dep, pos_but, map) :
     """Pour aller d'une pos_initiale a une pos_but a l'aide d'un parcours en largeur qui calcule le chemin optimal a l'aide de la map (mentale du robot)"""
+    pos_dep = tuple(pos_dep)
+    pos_but = tuple(pos_but)
+    if pos_dep == pos_but:
+        return [pos_dep]
     f = deque()
     tab_marquage = []
     tab_marquage.append(pos_dep)
@@ -62,7 +67,7 @@ def deplacement(pos_dep, pos_but, map) :
     chemin.reverse()#Le chemin est en sens inverse donc on utilise reverse pour avoir chemin[0] = pos_dep et chemin[n] = pos_but
     return chemin
 
-def parcours_map(pos_dep, map, id_agent, environment) :
+def parcours_map(pos_dep, map, Agent, environment) :
     """Pour lancer le parcours de la map par l'agent afin de remplir une carte mentale"""
     tab_marquage = []
     pile = []
@@ -72,11 +77,11 @@ def parcours_map(pos_dep, map, id_agent, environment) :
         if pos in tab_marquage :
             continue
         #Avancer agent sur case pos de coord (x, y)
-        percep = environment.get_perception(id_agent)
+        percep = environment.get_perception(Agent.IDAgent)
         chemin = deplacement(tuple(percep["posTerrain"]), pos, map)
         if chemin == []:#Il y a pas de chemin pour aller à pos
             continue
-        mouvement(chemin, id_agent, environment)
+        mouvement(chemin, Agent)
         if pos not in tab_marquage :
             tab_marquage.append(pos)
             v_g = (pos[0], pos[1]-1)
@@ -84,7 +89,7 @@ def parcours_map(pos_dep, map, id_agent, environment) :
             v_h = (pos[0]-1, pos[1])
             v_b = (pos[0]+1, pos[1])
             #interroger environnement sur les voisins :
-            vu = environment.get_perception(id_agent)["perception"]
+            vu = environment.get_perception(Agent.IDAgent)["perception"]
             if (v_g not in tab_marquage) :
                 #interroger sur nature de v_g (murs etc)
                 map[v_g[0]][v_g[1]] = vu["O"]
@@ -108,16 +113,19 @@ def parcours_map(pos_dep, map, id_agent, environment) :
                     pile.append(v_b)
     return map
 
-def mouvement(chemin, id_agent, environment) :
-    """Pour faire bouger l'agent elon chemin"""
+def mouvement(chemin, Agent) :
+    """Pour faire bouger l'agent selon chemin"""
+    environment = Agent.environment
+
     for i in range(1, len(chemin)):
         x1, y1 = chemin[i - 1]
         x2, y2 = chemin[i]
         if x2 == x1 - 1:
-            environment.moveAgent(id_agent, "HAUT")
+            Agent.nextMove = ["AVANCER", "HAUT"]
         elif x2 == x1 + 1:
-            environment.moveAgent(id_agent, "BAS")
+            Agent.nextMove = ["AVANCER", "BAS"] 
         elif y2 == y1 - 1:
-            environment.moveAgent(id_agent, "GAUCHE")
+            Agent.nextMove = ["AVANCER", "GAUCHE"]
         elif y2 == y1 + 1:
-            environment.moveAgent(id_agent, "DROITE")
+            Agent.nextMove = ["AVANCER", "DROITE"]
+        environment._handleAction(Agent.IDAgent, Agent.nextMove)
