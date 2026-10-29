@@ -42,15 +42,21 @@ def main(argv):
         print(key, agentInfo[key])
     print()
 
-    x,y = 6,1
-    print(env.carte["grille"][x])
+    print(env.get_perception(0))
 
-    print(env.get_perception(x,y))
+    print(env.casiers)
 
-    print("carte")
+    def printMap():
+        print("carte")
 
-    for i in range(len(carte["grille"])):
-        print(carte["grille"][i])
+        for i in range(len(carte["grille"])):
+            print(env.grid[i])
+
+    printMap()
+    for i in range(4):
+        env.timeStep()
+        printMap()
+
     return 0
 
 
