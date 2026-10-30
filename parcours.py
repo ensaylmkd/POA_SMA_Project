@@ -76,7 +76,7 @@ def functionExplorer(self, pos) :
     route = self.chemin
     #pos = Agent.newinfo["posTerrain"]
 
-    if pos not in tab_marquage :#si on a pas déjà visiter pos, on regarde les voisins
+    if pos not in tab_marquage :#si on a pas dï¿½jï¿½ visiter pos, on regarde les voisins
         tab_marquage.append(pos)
         v_g = (pos[0], pos[1]-1)
         v_d = (pos[0], pos[1]+1)
@@ -126,7 +126,7 @@ def abs(a) :
         return a
 
 def direction(pos1, pos2) :
-    """Donne une direction au déplacement que sur des positions voisines"""
+    """Donne une direction au dï¿½placement que sur des positions voisines"""
     x1 , y1 = pos1
     x2, y2 = pos2
     if x2 == x1 - 1:
@@ -152,7 +152,7 @@ def parcours_map(pos_dep, map, Agent, environment) :
         #Avancer agent sur case pos de coord (x, y)
         percep = environment.get_perception(Agent.IDAgent)
         chemin = deplacement(tuple(percep["posTerrain"]), pos, map)
-        if chemin == []:#Il y a pas de chemin pour aller à pos
+        if chemin == []:#Il y a pas de chemin pour aller ï¿½ pos
             continue
         mouvement(chemin, Agent)
         if pos not in tab_marquage :
