@@ -13,13 +13,13 @@ def abs(a) :
         return a
 
 class Explorer:
-    def __init__(self, agent, taille_carte):
+    def __init__(self, agent, tailleCarte):
         self.agent = agent
-        self.pile = [   ]
+        self.pile = []
         self.tab_marquage = []
         self.chemin = []
         #On initialise une carte de la bonne taille
-        self.carte_mental =[["#" if x == 0 or y == 0 or x == taille_carte[0]-1 or y == taille_carte[1]-1 else "?" for y in range(taille_carte[0])]for x in range(taille_carte[0])]
+        self.carte_mental =[["#" if x == 0 or y == 0 or x == tailleCarte["hauuteur"]-1 or y == tailleCarte["lageur"]-1 else "?" for y in range(tailleCarte["largeur"])]for x in range(tailleCarte["hauteur"])]
         self.is_finish = False
 
         self.pos = None
