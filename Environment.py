@@ -4,26 +4,30 @@ from MouvementDansArmoire import getPossibleObjects
 
 class Environment:
     # ================ Init =======================
-    def __init__(self, carte, scenario, dictionnaire, armoire):
+    def __init__(self, carte, scenario, dictionnaire, armoire, trace):
         # constante
+        self.trace = trace
         self.carte = carte
         self.scenario = scenario
         self.dictionnaire = dictionnaire
         self.armoire = armoire
-
+        
+        # constante et trace 
         self.demandes = {}
         for elt in self.scenario["demandes"]:
             intensite, emotion = EmotionInfoFromSentence(elt["message"])
             L = getPossibleObjects(armoire, emotion,intensite)
-
             self.demandes[elt["numero"]] = {"demande": elt,
                                             "InfoDico": [intensite, emotion] ,
                                             "PossibleObjects": L,
-                                            "repli": "aucun",
+                                            "casier_choisi": None,
+                                            "repli": None,
                                             "objet": None,
                                             "pas_utilises": 1,
                                             "succes": False,
                                             "motif_echec": None}
+        
+        self.commentaire = ""
 
         # dynamique
         self.grid = [list(ligne) for ligne in self.carte['grille']]
@@ -39,6 +43,7 @@ class Environment:
         self.agentsInventory = []
         self.agentsDemandesData = []
 
+
         self._initAgent()
 
     def _initAgent(self):
@@ -49,13 +54,28 @@ class Environment:
             # self.agentsInCasier.append(False)
             # self.agentsInventory.append(None)
 
-        self.agents.append(AgentExemple(self,0))
+        
         self.agentsPosTerrain.append(self.carte['depart_robot'])
         self.agentsPosCasier.append(self.armoire["casier_depart"])
         self.agentsInventory.append(None)
-        self.agentsDemandesData.append(None)
+        self.agentsDemandesData.append([None,None])
+        self.agents.append(AgentExemple(self,0))
 
     # ==========================================================================
+
+    # =================== Trace ================================================
+    def traceLivraisonAgent(self,IDAgent):
+        data = self.get_demandeAllInfoFromIDAgent(IDAgent)
+        self.trace.ajouter_livraison(self.agentsDemandesData[IDAgent][0],
+                                    data["demande"]["resident"],
+                                    data["InfoDico"][1],
+                                    data["InfoDico"][0],
+                                    data["casier_choisi"],
+                                    data["repli"],
+                                    data["objet"],
+                                    data["succes"],
+                                    data["motif_echec"]
+                                    )
 
     # Ce que voit le robot au depart : sa position, celle de l'armoire, celle
     # du dictionnaire, et celles des residents. Les murs, eux, ne sont PAS
@@ -91,7 +111,7 @@ class Environment:
         return self.casiers[x][y]
     
     def get_demandeAllInfoFromIDAgent(self,IDAgent):
-        return self.demandes[self.agentsDemandesData[IDAgent]]
+        return self.demandes[self.agentsDemandesData[IDAgent][0]] if self.agentsDemandesData[IDAgent][0] is not None else None
 
     # ================ Communication [Agent <== Environment] =====================
     def get_initAgent_info(self):
@@ -128,6 +148,8 @@ class Environment:
         }
     
     def get_NextDemande(self,IDAgent):
+        if self.agentsDemandesData[IDAgent][0] is not None:
+            self.traceLivraisonAgent(IDAgent)
         if len(self.agentsDemandesPile) > 0:
             demande = self.agentsDemandesPile.pop(0)
             self.agentsDemandesData[IDAgent] = [demande['numero'] , None ]
@@ -150,27 +172,38 @@ class Environment:
             case "CONSULTER":
                 self.consulteAgent(IDAgent)
             case "CHERCHER":
-                self.chercherAgent(IDAgent)
+                self.chercherAgent(IDAgent,action[1])
             case "PRENDRE":
                 self.prendreAgent(IDAgent)
             case "DONNER":
-                pass
+                self.donnerAgent(IDAgent)
             case "ATTENDRE":
                 pass
             case _:
                 print("[Env.HandleAction] Bah ça existe pas ", action[0], "mdr")
+        x,y = self.agentsPosCasier[IDAgent]
+        self.trace.ajouter_pas(
+            demande = self.agentsDemandesData[IDAgent][0],
+            position = self.agentsPosTerrain[IDAgent],
+            casier = self.agentsPosCasier[IDAgent],
+            action = action[0].upper(),
+            argument = action[1].upper(),
+            perception = self.get_NeuMannVisionBYidAgent(IDAgent),
+            contenu_casier = self.get_item(x,y),
+            commentaire = self.commentaire
+            )
 
     #/////////////// All Action Handler /////////////////
-    def _parseAction2Vec(self, action):
+    def _parseAction2Vec(self,action):
             res = (0,0)
             match action.upper():
                 case "N":
                     res = (-1,0)
                 case "S":
                     res = (1,0)
-                case "W":
-                    res = (0,-1)
                 case "O":
+                    res = (0,-1)
+                case "E":
                     res = (0,1)
                 case "RIEN":
                     pass
@@ -187,28 +220,37 @@ class Environment:
             
             self.grid[new_x][new_y] = self.grid[x][y]
             self.grid[x][y] = '.'
+            self.commentaire = "l'agent se déplace"
         else:
             print("[MoveAgent.grid_MoveAgent] BONK!! l'agent id", IDAgent ," a taper dans quelque chose :: ",self.grid[new_x][new_y])
+            self.commentaire = "BONK!! l'agent a taper dans quelque chose, il commence a pleurer (gros bb)"
         
     def moveAgent(self,IDAgent,action):
         """Action Avancer"""
         vector = self._parseAction2Vec(action)
         self._grid_moveAgent(IDAgent,vector)
         print("[avancerAgent]Succes: l'agent ",IDAgent,"se déplace")
+        
             
     # Pour CONSULTER
     def consulteAgent(self,IDAgent):
         """Action Consulter"""
         if self.agentsDemandesData[IDAgent] is None:
             print("[ConsulterAgent][error]l'agent",IDAgent," n'a pas de demande en cours, faire nextDemande")
+            self.commentaire = "L'agent n'a pas de demande en cours, il ne peut pas Consulter."
         elif 'D' not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[ConsulterAgent][error]Le dictionnaire n'est pas à porter de l'agent",IDAgent)
+            self.commentaire = "Le dictionnaire n'est pas à porter de l'agent, il ne peut pas le lire."
+    
         elif self.agentsDemandesData[IDAgent][1] is not None:
             print("[ConsulterAgent][error]l'agent",IDAgent,"connait déja l'émotion de sa phrase ")
+            self.commentaire = "L'agent connait déja l'émotion de sa phrase,il n'a pas besoin de Consulter."
+            
         else:
             data = self.get_demandeAllInfoFromIDAgent(IDAgent)
             self.agentsDemandesData[IDAgent][1] = data['InfoDico']
             print("[ConsulterAgent]L'agent ", IDAgent, " a lu dans le dictionnaire",IDAgent)
+            self.commentaire = "L'agent lit le dictionnaire, il sait maintenant l'émotion du résident."
     
     # Pour CHERCHER
     def _casier_moveAgent(self,IDAgent,vector):
@@ -225,15 +267,19 @@ class Environment:
 
         if 'A' not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[ChercherAgent]ERROR: L'armoire n'est pas à porter de l'agent",IDAgent)
+            self.commentaire = "L'agent n'est pas à porter de l'Armoire, il ne peut pas chercher dedans."
             return
-
+        
+        combonus =""
         if self.agentsInventory[IDAgent] is not None:
             _putItem(IDAgent)
             print("[ChercherAgent] l'agent ",IDAgent,"a un item sur lui, il le pose avant de bouger son curseur")
+            combonus = "L'agent avez un item, il le pose avant de chercher. "
         vector = self._parseAction2Vec(action)
         self._casier_moveAgent(IDAgent,vector)
         print("[ChercherAgent]Succes: l'agent ",IDAgent,"se déplace dans la vue armoire")
-    
+        self.commentaire = combonus + "L'agent se déplace dans la vue armoire"
+   
     # Pour PRENDRE
     def prendreAgent(self,IDAgent):
         def _takeItem(IDAgent):
@@ -244,28 +290,55 @@ class Environment:
 
         if 'A' not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[PrendreAgent]ERROR: L'agent",IDAgent," n'est à porter de l'armoire")
+            self.commentaire = "L'agent n'est pas à porter de l'Armoire, il ne peut pas chercher dedans."
         elif self.agentsInventory[IDAgent] is not None:
             print("[PrendreAgent] l'agent ",IDAgent,"a déja pris l'item de cette position (bouger le curseur pour le poser)")
+            self.commentaire = "L'agent a déja pris l'item de cette position. Il ne peut pas le reprendre."
+
         else:
             item = _takeItem(IDAgent)
             self.agentsInventory[IDAgent] = item
             if item["objet"] :
                 print("[prendreAgent]Succes: l'agent ",IDAgent,"prend l'objet",item)
+                self.commentaire = "L'agent prend l'item."
+
             else:
                 print("[PrendreAgent]Succes: l'agent ",IDAgent,"n'a rien pris")
+                self.commentaire = "L'agent ne prend rien."
     
     # Pour DONNER
     def donnerAgent(self,IDAgent):
+        def is_valideItem(IDAgent,item):
+            data = self.get_demandeAllInfoFromIDAgent(IDAgent)
+            return item in data["PossibleObjects"].keys()
+        
+        def updateData(IDAgent,item):
+            data = self.get_demandeAllInfoFromIDAgent(IDAgent)
+            i = self.agentsDemandesData[IDAgent][0]
+
+            self.demandes[i]["casier_choisi"] = self.agentsPosCasier[IDAgent]
+            self.demandes[i]["objet"] = item["objet"]
+            self.demandes[i]["pas_utilises"] = 0
+            if is_valideItem(IDAgent,item):
+                self.demandes[i]["repli"] = data["PossibleObjects"][item["objet"]]
+                self.demandes[i]["succes"] = True
+                self.commentaire = "L'agent a livré l'objet. Le résident est satisfait"
+            else:
+                self.demandes[i]["motif_echec"] = self.agents.errorMsg if self.agents.errorMsg is not None else "l'agent s'est trompé d'objet"
+                self.commentaire = "L'agent a livré l'objet. Le résident commence a pleuré (pas le bon objet)."
+            
         target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
         if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'est à porter du resident",target)
+            self.commentaire = "L'agent n'est pas à porter du résident à qui il doit livrer.("+target+")"
         elif self.agentsInventory[IDAgent] is None:
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'a pas d'objet sur lui")
+            self.commentaire = "L'agent n'a pas d'objet sur lui, il ne peut pas Donner d'objet."
         else:
             item = self.agentsInventory[IDAgent]
             self.agentsInventory[IDAgent] = None
-
-            #TODO vérifier si item correcte et ecrire trace 
+            
+            updateData(IDAgent,item)
 
  # ===================================================================
 
