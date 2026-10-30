@@ -1,4 +1,4 @@
-from src.agentExemple import *
+from src.agentExemple import AgentExemple
 
 class Environment:
     def __init__(self, carte, scenario, dictionnaire, armoire):

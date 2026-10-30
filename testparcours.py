@@ -1,186 +1,141 @@
-
-import unittest
-
+from Explorer import *
 from Environment import *
-from parcours import deplacement, parcours_map
+import json
+
+carte = "./cartes/appartement_01.json"
+scenario = "./scenarios/scenario_03.json"
+dictionnaire = "./donnees/dictionnaire.json"
+armoire = "./donnees/armoire_standard.json"
+
+with open(carte, "r", encoding="utf-8") as f:
+    carte = json.load(f)
+
+with open(scenario, "r", encoding="utf-8") as f:
+    scenario = json.load(f)
+
+with open(dictionnaire, "r", encoding="utf-8") as f:
+    dictionnaire = json.load(f)
+
+with open(armoire, "r", encoding="utf-8") as f:
+    armoire = json.load(f)
 
 
-# Carte de test fournie dans l'énoncé
-CARTE = {
-    "format": "robot-reconfort/carte",
-    "version": 1,
-    "nom": "appartement_01",
-    "dimensions": {
-        "hauteur": 9,
-        "largeur": 13
-    },
-    "grille": [
-        "#############",
-        "#......#....#",
-        "#...........#",
-        "#..P...#....#",
-        "#.#########.#",
-        "#......#....#",
-        "#R..A..#...P#",
-        "#.....D#....#",
-        "#############"
-    ],
-    "depart_robot": [6, 1],
-    "armoire": {"position": [6, 4]},
-    "dictionnaire": {"position": [7, 6]},
-    "residents": [
-        {"id": "R1", "nom": "Camille", "position": [6, 11]},
-        {"id": "R2", "nom": "Hugo", "position": [3, 3]}
+def test():
+    # Carte réelle : # = mur, . = case accessible
+    carte_reelle = [
+        list("#######"),
+        list("#.....#"),
+        list("#.###.#"),
+        list("#.....#"),
+        list("#######")
     ]
-}
 
-ARMOIRE = {
-    "casier_depart": [1, 0],
-    "casiers": []
-}
+    # Carte mentale initialement inconnue
+    carte_mentale = [
+        list("#######"),
+        list("#?????#"),
+        list("#?###?#"),
+        list("#?????#"),
+        list("#######")
+    ]
 
-SCENARIO = {}
-DICTIONNAIRE = {"position": [7, 6]}
+    # Position de départ
+    pos = (1, 1)
 
+    explorer = Explorer(pos, carte_mentale)
 
-def creer_environnement():
-    """Crée un nouvel environnement pour chaque test."""
-    carte = {
-        **CARTE,
-        "grille": list(CARTE["grille"]),
-        "depart_robot": list(CARTE["depart_robot"]),
-        "dimensions": dict(CARTE["dimensions"]),
-        "armoire": dict(CARTE["armoire"]),
-        "dictionnaire": dict(CARTE["dictionnaire"]),
-        "residents": list(CARTE["residents"])
-    }
+    # Simulation de l'exploration
+    for i in range(100):
 
-    return Environment(
-        carte,
-        SCENARIO,
-        DICTIONNAIRE,
-        ARMOIRE
-    )
+        # On récupère la perception réelle des voisins
+        x, y = pos
 
+        newinfo = {
+            "perception": {
+                "N": carte_reelle[x-1][y],
+                "S": carte_reelle[x+1][y],
+                "E": carte_reelle[x][y+1],
+                "O": carte_reelle[x][y-1]
+            }
+        }
 
-class TestParcours(unittest.TestCase):
+        # L'explorateur choisit son déplacement
+        action = explorer.functionExplorer(pos, newinfo)
 
-    def test_bfs_trouve_un_chemin(self):
-        """Le BFS doit trouver un chemin valide jusqu'à une case libre."""
-        env = creer_environnement()
+        print("etape i : ",i)
+        print("Position :", pos)
+        print("Action :", action)
 
-        # Carte connue pour ce test uniquement.
-        # On remplace R par "." car c'est la position du robot.
-        grille = [list(ligne) for ligne in CARTE["grille"]]
-        grille[6][1] = "."
+        # Si l'exploration est terminée
+        if action[0] == "ATTENDRE":
+            print("Exploration terminée !")
+            break
 
-        depart = (6, 1)
-        but = (6, 5)
+        # On actualise la position selon la direction
+        if action[1] == "HAUT":
+            pos = (x-1, y)
+        elif action[1] == "BAS":
+            pos = (x+1, y)
+        elif action[1] == "GAUCHE":
+            pos = (x, y-1)
+        elif action[1] == "DROITE":
+            pos = (x, y+1)
 
-        chemin = deplacement(depart, but, grille)
+        # Vérification : le robot ne traverse pas de mur
+        assert carte_reelle[pos[0]][pos[1]] == ".", \
+            "ERREUR : le robot a essayé de traverser un mur !"
 
-        self.assertTrue(chemin, "Aucun chemin trouvé")
-        self.assertEqual(chemin[0], depart)
-        self.assertEqual(chemin[-1], but)
+    print("\nCarte mentale finale :")
+    for ligne in explorer.carte_mental:
+        print("".join(ligne))
 
-        # Vérifie chaque déplacement et chaque case traversée.
-        for a, b in zip(chemin, chemin[1:]):
-            distance = abs(a[0] - b[0]) + abs(a[1] - b[1])
+def test_exploration(environment, max_steps=500):
 
-            self.assertEqual(distance, 1, "Déplacement non adjacent")
-            self.assertEqual(
-                grille[b[0]][b[1]],
-                ".",
-                f"Le chemin traverse une case interdite : {b}"
-            )
+    agent = environment.agents[0]
 
-        print("\nChemin BFS :", chemin)
-        print("Longueur du chemin :", len(chemin) - 1)
+    print("\n========== DEBUT DU TEST ==========")
 
-    def test_bfs_sans_chemin(self):
-        """Le BFS doit renvoyer [] si l'objectif est inaccessible."""
-        grille = [
-            list("#####"),
-            list("#.#.#"),
-            list("#####")
-        ]
+    for i in range(max_steps):
 
-        depart = (1, 1)
-        but = (1, 3)
+        # Position avant le déplacement
+        ancienne_pos = tuple(environment.agentsPosTerrain[0])
 
-        chemin = deplacement(depart, but, grille)
+        # On récupère la prochaine action et on l'exécute
+        environment.timeStep()
 
-        self.assertEqual(chemin, [])
+        nouvelle_pos = tuple(environment.agentsPosTerrain[0])
+        action = agent.nextMove
 
-    def test_bfs_depart_egal_but(self):
-        """Le chemin vers sa propre position contient une seule case."""
-        env = creer_environnement()
+        print(f"\nEtape {i+1}")
+        print("Position :", ancienne_pos)
+        print("Action :", action)
+        print("Nouvelle position :", nouvelle_pos)
 
-        grille = [list(ligne) for ligne in CARTE["grille"]]
-        grille[6][1] = "."
-
-        # Nécessite le correctif proposé dans la réponse précédente.
-        chemin = deplacement((6, 1), (6, 1), grille)
-
-        self.assertEqual(chemin, [(6, 1)])
-
-    def test_exploration_carte(self):
-        """Le robot doit explorer et mémoriser les cases accessibles."""
-        env = creer_environnement()
-        agent = env.agents[0]
-
-        hauteur = CARTE["dimensions"]["hauteur"]
-        largeur = CARTE["dimensions"]["largeur"]
-
-        # '?' signifie inconnu.
-        carte_mentale = [
-            ["?" for _ in range(largeur)]
-            for _ in range(hauteur)
-        ]
-
-        depart = tuple(CARTE["depart_robot"])
-        carte_mentale[depart[0]][depart[1]] = "."
-
-        # La fonction déplace réellement le robot grâce à mouvement().
-        resultat = parcours_map(
-    depart,
-    carte_mentale,
-    agent,
-    env
-)
-
-        position_finale = tuple(env.agentsPosTerrain[0])
-
-        self.assertEqual(len(resultat), hauteur)
-        self.assertTrue(
-            0 <= position_finale[0] < hauteur
-            and 0 <= position_finale[1] < largeur
+        # Vérification que le déplacement est valide
+        distance = (
+            abs(nouvelle_pos[0] - ancienne_pos[0])
+            + abs(nouvelle_pos[1] - ancienne_pos[1])
         )
 
-        # La position finale doit être une case intérieure.
-        self.assertNotIn(position_finale[0], (0, hauteur - 1))
-        self.assertNotIn(position_finale[1], (0, largeur - 1))
+        assert distance <= 1, "Le robot a effectué un déplacement invalide"
 
-        # La carte mentale doit avoir appris au moins une case.
-        connues = [
-            case
-            for ligne in resultat
-            for case in ligne
-            if case in (".", "#")
-        ]
+        # Vérification que le robot n'a pas traversé un mur
+        assert environment.grid[nouvelle_pos[0]][nouvelle_pos[1]] != "#", \
+            "Le robot a traversé un mur !"
 
-        self.assertGreater(
-            len(connues), 1,
-            "La carte mentale n'a pratiquement pas été renseignée"
-        )
-
-        print("\nCarte mentale obtenue :")
-        for ligne in resultat:
+        # Affichage de la carte mentale
+        print("\nCarte mentale :")
+        for ligne in agent.carte_mental:
             print("".join(ligne))
 
-        print("Position finale :", position_finale)
-        print("Nombre de cases connues :", len(connues))
+        # Fin de l'exploration
+        if agent.explorer.is_finish:
+            print("\n========== EXPLORATION TERMINEE ==========")
+            print("Nombre de déplacements :", i+1)
+            return True
 
+    print("\nERREUR : nombre maximal d'étapes atteint.")
+    return False
+environment = Environment(carte, scenario, dictionnaire, armoire)
 
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
+test_exploration(environment)
