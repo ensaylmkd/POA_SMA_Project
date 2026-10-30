@@ -131,25 +131,6 @@ def getPossibleObjects(armoire, emotion, intensite):
             possibleObjects[objet] = repli
 
     if possibleObjects == {}:
-        possibleObjects[objet] = repli
+        possibleObjects[objet] = (repli, (i,e))
 
     return possibleObjects
-
-## test : armoire ne doit pas etre la ## 
-import reconfort_io as rio
-armoire = rio.charger_armoire("donnees/armoire_test.json")
-
-def main(argv):
-    if len(argv) != 3:
-        print(__doc__.strip())
-        return 2
-    intensite = argv[1]
-    emotion = argv[2]
-
-    print(getPossibleObjects(armoire, emotion, intensite))
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main(sys.argv))
