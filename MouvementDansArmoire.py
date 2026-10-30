@@ -1,5 +1,3 @@
-import sys
-
 class MouvementDansArmoire:
     def __init__(self, agent, posDepart, emotionVoulu, intensiteVoulu):
         self.agent = agent
@@ -86,10 +84,6 @@ class MouvementDansArmoire:
             self.repli = 'armoire vide'
             
         return ["PRENDRE", self.objetVu]
-
-#######################################################
-######################   MAIN   #######################
-#######################################################
 
 emotions = [
         "joie",

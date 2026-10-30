@@ -1,3 +1,5 @@
+from MouvementDansArmoire import *
+
 class AgentExemple:
     def __init__(self,environment,IDAgent):
         self.environment = environment
@@ -9,7 +11,8 @@ class AgentExemple:
         #etats = EXPLORER, boucle(DICTIONNAIRE, ARMOIRE, OBJET, LIVRAISON)  
         self.etat = "EXPLORER"
         self.is_etatfinish = False
-        
+
+        self.actionMaker =  # il doit etre a explorer
         self.nextMove = ["CHERCHER","DROITE"]
         
         # Variable de test Env._handleAction
@@ -43,11 +46,11 @@ class AgentExemple:
                     pass #functionDictionnaire() si à coter du dico return action consulter , sinon action Avancer qui se rapproche du dico
             case "ARMOIRE":
                 if 'A' in self.newinfo['perception'].values(): # si à coter de l'armoire
-                    pass #functionArmoire()  return action chercher
+                    self.actionMaker = MouvementDansArmoire(self, self.newinfo['posTerrain'], emotion, intensite)
                 else: # sinon action Avancer qui se rapproche de l'armoire
                     pass 
             case "OBJET":
-                pass #functionObjet() si sur le bon objet return action prendre, sinon action Avancer vers le bon objet
+                self.nextMove = self.actionMaker.nextAction()
             case "LIVRAISON":
                 pass #functionLivraison() si à coter de recepteur return action Donner, sinon action Avancer se rapprocher du recepteur
         # foutre le résultat dans self.nextMove ( on pourra changer si besoin)
