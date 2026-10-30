@@ -3,16 +3,18 @@ from src.agentExemple import *
 class Environment:
     # ================ Init =======================
     def __init__(self, carte, scenario, dictionnaire, armoire):
+        # constante
         self.carte = carte
         self.scenario = scenario
         self.dictionnaire = dictionnaire
         self.armoire = armoire
-
+        
+        # dynamique
         self.grid = [list(ligne) for ligne in self.carte['grille']]
-
         self.casiers = [[None for _ in range(8)] for _ in range(3)]
         for elt in self.armoire["casiers"]:
             self.casiers[elt["ligne"]][elt["colonne"]] = {key: val for key, val in elt.items() if key not in ["ligne","colonne"]}
+        self.demandes = self.scenario['demandes']
 
         self.agents = []
         self.agentsPosTerrain = []
@@ -80,11 +82,14 @@ class Environment:
         casier depart  : [1, 0]
         residents : [{'id': 'R1', 'nom': 'Camille', 'position': [6, 11]}, {'id': 'R2', 'nom': 'Hugo', 'position': [3, 3]}]
         """
+        if len(demandes) > 0:
+            demande = self.demandes.pop(0)
         return {"departRobot": self.carte['depart_robot'], 
                 "armoirePos": self.carte['armoire']['position'],
                 "dictionnairePos": self.carte['dictionnaire']['position'],
                 "departCasier": self.armoire['casier_depart'],
-                "residents": self.carte["residents"]
+                "residents": self.carte["residents"],
+                "demande": demande
                  }
     
     def get_perception(self,IDAgent):
@@ -110,7 +115,7 @@ class Environment:
 
     # ======================================== Action logique ============================================
 
-    # ///////////// Main Action Logique function ////////////
+    # ///////////// MAIN Action Logique function ////////////
     def _handleAction(self,IDAgent,action):
         match action[0].upper():
             case "AVANCER":
@@ -132,7 +137,7 @@ class Environment:
     # Pour AVANCER 
     def _casier_moveAgent(self,IDAgent,vector):
         x,y = self.agentsPosCasier[IDAgent]
-        new_x, new_y = (vector[0] + x) % 8 , (vector[1] + y) % 3
+        new_x, new_y = (vector[0] + x) % 3, (vector[1] + y) % 8
         self.agentsPosCasier[IDAgent] = [new_x,new_y]
     
     def _grid_moveAgent(self,IDAgent,vector):
@@ -167,7 +172,7 @@ class Environment:
 
         vector = _parseAction2Vec(action)
         if self.agentsInCasier[IDAgent]:
-            self._casier_moveAgent(IDAgent)
+            self._casier_moveAgent(IDAgent,vector)
         else:
             self._grid_moveAgent(IDAgent,vector)
             
@@ -212,6 +217,7 @@ class Environment:
 
         if 'A' in self.get_NeuMannVisionBYidAgent(IDAgent).values() and self.agentsInCasier[IDAgent]:
             item = _takeItem(IDAgent)
+            self.agentsInventory[IDAgent] = item
             self.agentsInCasier[IDAgent] = False
             if item["objet"] :
                 print("[ChercherAgent]Succes: l'agent ",IDAgent,"prend l'objet",item)

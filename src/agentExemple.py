@@ -10,11 +10,22 @@ class AgentExemple:
         
         # Variable de test Env._handleAction
         self.futurNextMove = [
-            ["CHERCHER","DROITE"],
-            ["Prendre",None]
+            ["AVANCER","Droite"],
+            ["AVANCER","Droite"],
+            ["Chercher","DROITE"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["AVANCER","Droite"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["Prendre",None],
+            ["Chercher","DROITE"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"]
         ]
-
         self.i = 0
+
         self.infoDeBase = environment.get_initAgent_info()
     
     def updateState(self):
@@ -25,4 +36,4 @@ class AgentExemple:
     def compute_NextMove(self):
         """met à jour nextMove selon état et position actuel"""
         self.nextMove = self.futurNextMove[self.i]
-        self.i = (self.i + 1) % 2 
+        self.i = (self.i + 1) 
