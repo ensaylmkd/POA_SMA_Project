@@ -10,23 +10,19 @@ class AgentExemple:
         
         # Variable de test Env._handleAction
         self.futurNextMove = [
-            ["AVANCER","Droite"],
-            ["AVANCER","Droite"],
-            ["Chercher","DROITE"],
-            ["AVANCER","HAut"],
-            ["AVANCER","HAut"],
-            ["AVANCER","Droite"],
-            ["AVANCER","HAut"],
-            ["AVANCER","HAut"],
-            ["AVANCER","HAut"],
-            ["Prendre",None],
-            ["Chercher","DROITE"],
-            ["AVANCER","HAut"],
-            ["AVANCER","HAut"]
+            ["AVANCER","E"],
+            ["AVANCER","E"],
+            ["CONSULTER","E"],
+            ["Chercher","E"],
+            ["PRENDRE","HAut"],
+            ["DONNER","HAut"],
+            ["AVANCER","E"],
         ]
         self.i = 0
 
         self.infoDeBase = environment.get_initAgent_info()
+
+        self.demande = environment.get_NextDemande(self.IDAgent)
     
     def updateState(self):
         """je sais pas encore exactement quoi mettre"""
