@@ -35,27 +35,28 @@ def main(argv):
     # ====================== MAIN ==============================
 
     env = Environment(carte,scenario,dictionnaire,armoire)
-    print(env)
+    print(env.demandes)
 
     agentInfo = env.get_initAgent_info()
     for key in agentInfo.keys():
         print(key, agentInfo[key])
     print()
 
-    print(env.get_perception(0))
+    # print(env.get_perception(0))
 
-    print(env.casiers)
+    #print(env.casiers)
 
     def printMap():
-        print("carte")
-
         for i in range(len(carte["grille"])):
             print(env.grid[i])
 
-    printMap()
-    for i in range(4):
-        env.timeStep()
-        printMap()
+    # printMap()
+    # for i in range(12):
+    #     print("carte", i+1)
+    #     env.timeStep()
+    #     printMap()
+    #     print(env.get_perception(0))
+    #     print(env.agentsInventory)
 
     return 0
 

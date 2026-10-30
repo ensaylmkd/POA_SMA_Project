@@ -17,8 +17,19 @@ class AgentExemple:
         
         # Variable de test Env._handleAction
         self.futurNextMove = [
-            ["CHERCHER","DROITE"],
-            ["Prendre",None]
+            ["AVANCER","Droite"],
+            ["AVANCER","Droite"],
+            ["Chercher","DROITE"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["AVANCER","Droite"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"],
+            ["Prendre",None],
+            ["Chercher","DROITE"],
+            ["AVANCER","HAut"],
+            ["AVANCER","HAut"]
         ]
         self.i = 0
 
@@ -56,4 +67,4 @@ class AgentExemple:
         # foutre le résultat dans self.nextMove ( on pourra changer si besoin)
 
         self.nextMove = self.futurNextMove[self.i]
-        self.i = (self.i + 1) % 2
+        self.i = (self.i + 1) 
