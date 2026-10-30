@@ -13,22 +13,30 @@ def abs(a) :
         return a
 
 class Explorer:
-    def __init__(self, taille_carte):
-        self.pile = [   ]
+    def __init__(self, agent, tailleCarte):
+        self.agent = agent
+        self.pile = []
         self.tab_marquage = []
         self.chemin = []
         #On initialise une carte de la bonne taille
-        self.carte_mental =[["#" if x == 0 or y == 0 or x == taille_carte[0]-1 or y == taille_carte[1]-1 else "?" for y in range(taille_carte[0])]for x in range(taille_carte[0])]
+        self.carte_mental =[["#" if x == 0 or y == 0 or x == tailleCarte["hauuteur"]-1 or y == tailleCarte["lageur"]-1 else "?" for y in range(tailleCarte["largeur"])]for x in range(tailleCarte["hauteur"])]
         self.is_finish = False
 
-    def functionExplorer(self, pos, newinfo) :
+        self.pos = None
+        self.vu = None
+
+    def updateState(self):
+        self.pos = self.agent.newinfo["posTerrain"]
+        self.vu = self.agent.newinfo["perception"]
+
+    def nextAction(self) :
         """Lance l'exploration de la map, pour remplir la carte mentale"""
         pile = self.pile
         map = self.carte_mental
         tab_marquage = self.tab_marquage
-        map[pos[0]][pos[1]] = "."          # ma case est forcément libre
+        pos = tuple(self.pos)
+        map[pos[0]][pos[1]] = "." # ma case est forcément libre
         #pos = Agent.newinfo["posTerrain"]
-        pos = tuple(pos)
         if pos not in tab_marquage :#si on a pas déjà visiter pos, on regarde les voisins
             tab_marquage.append(pos)
             v_g = (pos[0], pos[1]-1)
@@ -36,7 +44,7 @@ class Explorer:
             v_h = (pos[0]-1, pos[1])
             v_b = (pos[0]+1, pos[1])
             #interroger environnement sur les voisins :
-            vu = newinfo["perception"]
+            vu = self.vu
             if (v_g not in tab_marquage) and v_g not in pile:
                 #interroger sur nature de v_g (murs etc)
                 map[v_g[0]][v_g[1]] = vu["O"]
@@ -67,7 +75,6 @@ class Explorer:
             return ["ATTENDRE", None]
         # on retire de la pile les cases déjà visitées
         pile[:] = [p for p in pile if p not in tab_marquage]
-
         # on cherche le plus court chemin parmi toutes les cibles possibles
         meilleur = []
         for cible in list(pile):
