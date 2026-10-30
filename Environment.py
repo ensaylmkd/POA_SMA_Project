@@ -124,7 +124,7 @@ class Environment:
             'contenu_casier': self.get_item(x2,y2),
             'posTerrain': self.agentsPosTerrain[IDAgent],
             'posCasier': self.agentsPosCasier[IDAgent],
-            'InfoDemande': self.agentsInfoData[IDAgent][1],
+            'InfoDemande': self.agentsDemandesData[IDAgent][1],
         }
     
     def get_NextDemande(self,IDAgent):
@@ -161,16 +161,16 @@ class Environment:
                 print("[Env.HandleAction] Bah ça existe pas ", action[0], "mdr")
 
     #/////////////// All Action Handler /////////////////
-    def _parseAction2Vec(action):
+    def _parseAction2Vec(self, action):
             res = (0,0)
             match action.upper():
-                case "HAUT":
+                case "N":
                     res = (-1,0)
-                case "BAS":
+                case "S":
                     res = (1,0)
-                case "GAUCHE":
+                case "W":
                     res = (0,-1)
-                case "DROITE":
+                case "O":
                     res = (0,1)
                 case "RIEN":
                     pass
@@ -192,21 +192,21 @@ class Environment:
         
     def moveAgent(self,IDAgent,action):
         """Action Avancer"""
-        vector = _parseAction2Vec(action)
+        vector = self._parseAction2Vec(action)
         self._grid_moveAgent(IDAgent,vector)
         print("[avancerAgent]Succes: l'agent ",IDAgent,"se déplace")
             
     # Pour CONSULTER
     def consulteAgent(self,IDAgent):
         """Action Consulter"""
-        if elf.agentsDemandesData[IDAgent] is None:
+        if self.agentsDemandesData[IDAgent] is None:
             print("[ConsulterAgent][error]l'agent",IDAgent," n'a pas de demande en cours, faire nextDemande")
         elif 'D' not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[ConsulterAgent][error]Le dictionnaire n'est pas à porter de l'agent",IDAgent)
         elif self.agentsDemandesData[IDAgent][1] is not None:
             print("[ConsulterAgent][error]l'agent",IDAgent,"connait déja l'émotion de sa phrase ")
         else:
-            data = get_demandeAllInfoFromIDAgent(IDAgent)
+            data = self.get_demandeAllInfoFromIDAgent(IDAgent)
             self.agentsDemandesData[IDAgent][1] = data['InfoDico']
             print("[ConsulterAgent]L'agent ", IDAgent, " a lu dans le dictionnaire",IDAgent)
     
@@ -230,7 +230,7 @@ class Environment:
         if self.agentsInventory[IDAgent] is not None:
             _putItem(IDAgent)
             print("[ChercherAgent] l'agent ",IDAgent,"a un item sur lui, il le pose avant de bouger son curseur")
-        vector = _parseAction2Vec(action)
+        vector = self._parseAction2Vec(action)
         self._casier_moveAgent(IDAgent,vector)
         print("[ChercherAgent]Succes: l'agent ",IDAgent,"se déplace dans la vue armoire")
     
@@ -256,7 +256,7 @@ class Environment:
     
     # Pour DONNER
     def donnerAgent(self,IDAgent):
-        target = get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
+        target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
         if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'est à porter du resident",target)
         elif self.agentsInventory[IDAgent] is None:

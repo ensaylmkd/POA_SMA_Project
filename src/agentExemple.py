@@ -12,7 +12,7 @@ class AgentExemple:
         self.etat = "EXPLORER"
         self.is_etatfinish = False
 
-        self.actionMaker =  # il doit etre a explorer
+        self.actionMaker = None # il doit etre a explorer de base
         self.nextMove = ["CHERCHER","DROITE"]
         
         # Variable de test Env._handleAction
@@ -42,6 +42,8 @@ class AgentExemple:
         if self.is_etatfinish:
             self.nextState()
             self.is_etatfinish = False
+
+        self.actionMaker.updateState()
         # traiter newinfo pour changer d'état ou mettre à jour carte_mental si besoin
         # met à jour la map
         # si  
@@ -53,15 +55,19 @@ class AgentExemple:
             case "EXPLORER":
                 pass #functionExplorer() explore la map 
             case "DICTIONNAIRE":
-                if 'D' in self.newinfo['perception'].values():
-                    pass #functionDictionnaire() si à coter du dico return action consulter , sinon action Avancer qui se rapproche du dico
+                if 'D' in self.newinfo['perception'].values(): # si à coter du dictionnaire
+                    self.nextMove = ["CONSULTER", ""]
+                    self.is_etatfinish = True
+                else: # sinon action Avancer qui se rapproche de l'armoire
+                    pass
             case "ARMOIRE":
                 if 'A' in self.newinfo['perception'].values(): # si à coter de l'armoire
-                    self.actionMaker = MouvementDansArmoire(self, self.newinfo['posTerrain'], emotion, intensite)
+                    self.is_etatfinish = True
                 else: # sinon action Avancer qui se rapproche de l'armoire
                     pass 
             case "OBJET":
                 self.nextMove = self.actionMaker.nextAction()
+                self.is_etatfinish = self.actionMaker.repli != None
             case "LIVRAISON":
                 pass #functionLivraison() si à coter de recepteur return action Donner, sinon action Avancer se rapprocher du recepteur
         # foutre le résultat dans self.nextMove ( on pourra changer si besoin)
