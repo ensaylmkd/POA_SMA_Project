@@ -46,7 +46,6 @@ class AgentExemple:
         if self.is_etatfinish:
             self.nextState()
             self.is_etatfinish = False
-
         self.actionMaker.updateState()
         # traiter newinfo pour changer d'état ou mettre à jour carte_mental si besoin
         # met à jour la map
