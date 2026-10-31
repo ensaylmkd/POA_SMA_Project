@@ -1,5 +1,5 @@
 from src.Robot import *
-from consultDico import EmotionInfoFromSentence
+from src.consultDico import EmotionInfoFromSentence
 
 class Environment:
     # ================ Init =======================
@@ -351,8 +351,6 @@ class Environment:
                 print("l'agent donne l'objet, n'est pas correcte")
             
         target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
-        ## Lucas : GROS PROBLEME YASSINE (en vrai pas autant juste target cest R1 ... mais dans la perception cest P pour tous les residents, moi j'ai fait un check dans case livraison de l'agent)
-        # if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():  (ta ligne)
         if 'P' not in self.get_NeuMannVisionBYidAgent(IDAgent).values() and not self.is_rightP(IDAgent): 
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'est à porter du resident",target)
             self.commentaire = "L'agent n'est pas à porter du résident à qui il doit livrer.("+target+")"
@@ -373,7 +371,6 @@ class Environment:
         actions = self.get_agentsActions()
         for i in range(len(actions)):
             self._handleAction(i,actions[i])
-        print("[MakeAgentNextMove] ActionsAgents :", actions)
  
     def timeStep(self):
         """ Avance de 1 temp en : 
@@ -396,7 +393,6 @@ class Environment:
     def run(self):
         while self.is_allAgentOff():
             self.timeStep()
-            print("step")
 
 # ==================================================
 

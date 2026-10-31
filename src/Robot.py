@@ -38,7 +38,7 @@ class Robot:
             self.etat = "ARMOIRE"
         elif self.etat == "ARMOIRE" :
             self.etat = "LIVRAISON"
-        elif self.etat == "LIVRAISON" and self.requete is not None:
+        elif self.etat == "LIVRAISON":
             self.etat = "DICTIONNAIRE"
         else:
             self.etat = ""
@@ -51,7 +51,7 @@ class Robot:
         if self.requete is None or not self.on:
             self.requete = self.environment.get_NextDemande(self.IDAgent)
             self.checkRequest()
-            return
+            
 
         if self.is_etatfinish and self.on:
             self.nextState()

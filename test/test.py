@@ -1,14 +1,14 @@
 """pour lancer : python -m unittest discover -s test -v"""
 import unittest
-from Environment import *
+from src.Environment import *
 from affichage import *
-from Explorer import *
-from parcours import *
+from src.ActionMaker.Explorer import *
+from src.parcours import *
 import reconfort_io as rio
-from MouvementDansArmoire import *
-from MouvementDansMap import *
-import consultDico as cd
-from src.agentExemple import *
+from src.ActionMaker.MouvementDansArmoire import *
+from src.ActionMaker.MouvementDansMap import *
+import src.consultDico as cd
+from src.Robot import *
 
 appartement = [
     ['#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#'],  # 0

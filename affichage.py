@@ -369,11 +369,10 @@ def main(argv):
         
         elif "action" in step and step["action"] == "DONNER":
             label_hand.config(text=f"Main : vide")
-            print(trace["livraisons"][l])
         # Lucas : A decommenter si il y a livraison dans la trace
             if trace["livraisons"][l]:
                 l+=1
-                print(l)
+
         else:
             if dans_armoire:
                 map_armoire = updateMapArmoire(step['casier'], map_armoire, armoire['casiers'][step['casier'][0] * 8 + step['casier'][1]]['objet'])

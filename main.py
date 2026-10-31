@@ -1,12 +1,12 @@
 """
-python3 main.py cartes/appartement_01.json scenarios/scenario_01.json donnees sorties/trace_test.json
+python3 -m main cartes/appartement_01.json scenarios/scenario_03.json donnees sorties/trace_test.json
 """
 
 import sys
 from pathlib import Path
 
 import reconfort_io as rio
-from Environment import *
+from src.Environment import *
 
 
 def main(argv):
@@ -36,30 +36,10 @@ def main(argv):
     trace = rio.Trace(
         nom_carte=carte["nom"],
         nom_scenario=scenario["nom"],
-        equipe=["A completer", "A completer"],
+        equipe=["FAURON Quentin","LAMKADDEM Yassine", "THOMAS Lucas"]
      )
 
     env = Environment(carte,scenario,dictionnaire,armoire,trace)
-    # a = [cle for cle in env.demandes if cle != "PossibleObjects"]
-    
-    # for key in a:
-    #     print(key, env.demandes[key])
-    #     print()
-    #     print()
-
-    # agentInfo = env.get_initAgent_info()
-    # for key in agentInfo.keys() :
-    #     print(key, agentInfo[key])
-    # print()
-
-    
-
-    # # print(env.casiers)
-
-    # def printMap():
-    #     for i in range(len(carte["grille"])):
-    #         print(env.grid[i])
-
     env.run()
     
     trace.ecrire(chemin_sortie)
@@ -69,41 +49,5 @@ def main(argv):
 
 
     # ==========================================================
-    
-
-    # trace = rio.Trace(
-    #     nom_carte=carte["nom"],
-    #     nom_scenario=scenario["nom"],
-    #     equipe=["A completer", "A completer"],
-    # )
-
-    # for demande in scenario["demandes"]:
-    #     numero = demande["numero"]
-    #     print(f"\ndemande {numero} ({demande['resident']}) : "
-    #           f"{demande['message']}")
-    #     print(f"  mots normalises : {rio.normaliser(demande['message'])}")
-
-    #     trace.ajouter_pas(
-    #         demande=numero,
-    #         position=carte["depart_robot"],
-    #         casier=armoire["casier_depart"],
-    #         action="ATTENDRE",
-    #         commentaire="robot de demonstration : ne fait rien",
-    #     )
-    #     trace.ajouter_livraison(
-    #         demande=numero,
-    #         resident=demande["resident"],
-    #         emotion=None,
-    #         intensite=None,
-    #         casier_choisi=None,
-    #         repli="aucun",
-    #         objet=None,
-    #         succes=False,
-    #         motif_echec="agent non implemente",
-    #     )
-
-    # trace.ecrire(chemin_sortie)
-    # print(f"\ntrace ecrite : {chemin_sortie}")
-
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

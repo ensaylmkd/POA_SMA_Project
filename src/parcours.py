@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from collections import deque
-from Environment import *
-from src.agentExemple import *
+from src.Environment import *
+from src.Robot import *
 
 class Arbre:
     def __init__(self, valeur,  pere=None):
