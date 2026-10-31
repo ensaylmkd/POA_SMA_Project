@@ -5,14 +5,14 @@ from MouvementDansArmoire import getPossibleObjects
 class Environment:
     # ================ Init =======================
     def __init__(self, carte, scenario, dictionnaire, armoire, trace):
-        # constante
+        # constante DATA
         self.trace = trace
         self.carte = carte
         self.scenario = scenario
         self.dictionnaire = dictionnaire
         self.armoire = armoire
         
-        # constante et trace 
+        # constante DATA et trace dynamique
         self.demandes = {}
         for elt in self.scenario["demandes"]:
             intensite, emotion = EmotionInfoFromSentence(elt["message"])
@@ -29,21 +29,23 @@ class Environment:
         
         self.commentaire = ""
 
-        # dynamique
+        # dynamique DATA environment
         self.grid = [list(ligne) for ligne in self.carte['grille']]
+        
         self.casiers = [[None for _ in range(8)] for _ in range(3)]
         for elt in self.armoire["casiers"]:
             self.casiers[elt["ligne"]][elt["colonne"]] = {key: val for key, val in elt.items() if key not in ["ligne","colonne"]}
         
         self.agentsDemandesPile = self.scenario['demandes'].copy()
 
+        # dynamique Data des agents
         self.agents = []
         self.agentsPosTerrain = []
         self.agentsPosCasier = []
         self.agentsInventory = []
         self.agentsDemandesData = []
 
-
+        # création des agents
         self._initAgent()
 
     def _initAgent(self):
