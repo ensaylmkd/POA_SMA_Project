@@ -1,4 +1,4 @@
-from src.agentExemple import *
+from src.Robot import *
 from consultDico import EmotionInfoFromSentence
 
 class Environment:
@@ -60,7 +60,7 @@ class Environment:
         self.agentsPosCasier.append(self.armoire["casier_depart"])
         self.agentsInventory.append(None)
         self.agentsDemandesData.append([None,None])
-        self.agents.append(AgentExemple(self,0))
+        self.agents.append(Robot(self,0))
 
     # ==========================================================================
 

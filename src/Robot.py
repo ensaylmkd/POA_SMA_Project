@@ -2,7 +2,7 @@ from src.ActionMaker.MouvementDansArmoire import *
 from src.ActionMaker.MouvementDansMap import *
 from src.ActionMaker.Explorer import Explorer
 
-class AgentExemple:
+class Robot:
     def __init__(self,environment,IDAgent):
         self.environment = environment
         self.IDAgent = IDAgent
