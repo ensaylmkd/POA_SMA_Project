@@ -96,7 +96,9 @@ class MouvementDansArmoire:
             elif self.posCurseur[1] == self.bestcandidat[1]:
                 self.repli = 'intensite'
             else:
-                self.repli = 'voisine_' + str(abs(self.bestcandidat[0] - self.posCurseur[0]))
+                distance = abs(self.bestcandidat[0] - self.posCurseur[0])
+                distance = min(distance, 8 - distance)
+                self.repli = 'voisine_' + str(distance)
 
             self.casierChoisi = self.posCurseur
             return ["PRENDRE", self.objetVu]
@@ -104,30 +106,4 @@ class MouvementDansArmoire:
             self.repli = 'armoire vide'
             return ["PRENDRE", ""]
 
-def getPossibleObjects(armoire, emotion, intensite):
-    intensiteIndex = intensites.index(intensite)
-    emotionIndex = emotions.index(emotion)
-
-    possibleObjects = {}
-    candidats = MouvementDansArmoire.findCandidat(None, intensiteIndex, emotionIndex)
-    objet = None
-    repli = 'armoire vide'
-
-    for i, e in candidats:
-
-        objet = armoire['casiers'][i * 8 + e]['objet']
-
-        if objet is not None:
-            if (i, e) == (intensiteIndex, emotionIndex):
-                repli = 'aucun'
-            elif e == emotionIndex:
-                repli = 'intensite'
-            else:
-                repli = 'voisine_' + str(abs(emotionIndex - e))
-
-            possibleObjects[objet] = repli
-
-    if possibleObjects == {}:
-        possibleObjects[objet] = (repli, (i,e))
-
-    return possibleObjects
+            

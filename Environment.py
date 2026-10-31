@@ -1,6 +1,5 @@
 from src.agentExemple import *
 from consultDico import EmotionInfoFromSentence
-from MouvementDansArmoire import getPossibleObjects
 
 class Environment:
     # ================ Init =======================
@@ -21,13 +20,13 @@ class Environment:
                                             "InfoDico": [intensite, emotion] ,
                                             "PossibleObjects": L,
                                             "casier_choisi": None,
-                                            "repli": None,
+                                            "repli": 'aucun',
                                             "objet": None,
-                                            "pas_utilises": 1,
                                             "succes": False,
-                                            "motif_echec": None}
+                                            "motif_echec": ""}
         
         self.commentaire = ""
+        self.cptPas = 0
 
         # dynamique DATA environment
         self.grid = [list(ligne) for ligne in self.carte['grille']]
@@ -68,8 +67,10 @@ class Environment:
     # =================== Trace ================================================
     def traceLivraisonAgent(self,IDAgent):
         data = self.get_demandeAllInfoFromIDAgent(IDAgent)
-        data['repli'] = "aucun" # Lucas : ca plante sinon
-        data['motif_echec'] = "oui"
+        msgEchec = None
+        if not data["succes"]:
+            msgEchec = self.agents[IDAgent].errorMsg if self.agents[IDAgent].errorMsg is not None else "l'agent s'est trompé d'objet"
+
         self.trace.ajouter_livraison(self.agentsDemandesData[IDAgent][0],
                                     data["demande"]["resident"],
                                     data["InfoDico"][1],
@@ -78,7 +79,7 @@ class Environment:
                                     data["repli"],
                                     data["objet"],
                                     data["succes"],
-                                    data["motif_echec"]
+                                    msgEchec
                                     )
 
     # Ce que voit le robot au depart : sa position, celle de l'armoire, celle
@@ -88,11 +89,12 @@ class Environment:
     # agent n'y a pas droit.
 
     # ========================= Accesseur Utile ======================
+    # //// For Environment Only ////
     def get_NeuMannVisionBYpos(self,x,y):
         """ Donne la vision N S E O de la grille à la pos @x,@y
         return {"N":N, "S":S, "E":E,"O":O} """
         hauteur,largeur = self.carte["dimensions"].values()
-        if (x > hauteur and x >= 0) or (y > largeur and y >= 0): # Lucas : cest ente 0 et 2 | 0 et 7
+        if (x >= hauteur and x <= 0) or (y >= largeur and y <= 0):
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
         N = self.grid[x-1][y]
@@ -109,13 +111,21 @@ class Environment:
 
     def get_item(self,x,y):
         """renvoie l'objet de l'armoire en position @x,@y"""
-        if (x >= 3 and x > 0) or (y >= 8 and y > 0): # Lucas : cest ente 0 et 2 | 0 et 7
+        if (x > 3 and x < 0) or (y > 8 and y < 0): 
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
         return self.casiers[x][y]
     
     def get_demandeAllInfoFromIDAgent(self,IDAgent):
         return self.demandes[self.agentsDemandesData[IDAgent][0]] if self.agentsDemandesData[IDAgent][0] is not None else None
+    
+    # //////////////////////////////
+
+    def get_residentInfoByRID(self,P):
+        for r in self.carte["residents"]:
+            if r["id"] == P:
+                return r
+        return None
 
     # ================ Communication [Agent <== Environment] =====================
     def get_initAgent_info(self):
@@ -157,9 +167,10 @@ class Environment:
         if len(self.agentsDemandesPile) > 0:
             demande = self.agentsDemandesPile.pop(0)
             self.agentsDemandesData[IDAgent] = [demande['numero'] , None ]
-            return demande
         else:
-            return None 
+            demande = None
+            self.agentsDemandesData[IDAgent] = [None, None ]
+        return demande 
 
     # ================ Communication [Agent ==> Environment] =====================
 
@@ -196,6 +207,7 @@ class Environment:
             contenu_casier = self.get_item(x,y),
             commentaire = self.commentaire
             )
+        self.cptPas += 1
 
     #/////////////// All Action Handler /////////////////
     def _parseAction2Vec(self,action):
@@ -235,7 +247,6 @@ class Environment:
         self._grid_moveAgent(IDAgent,vector)
         print("[avancerAgent]Succes: l'agent ",IDAgent,"se déplace")
         
-            
     # Pour CONSULTER
     def consulteAgent(self,IDAgent):
         """Action Consulter"""
@@ -311,10 +322,17 @@ class Environment:
                 self.commentaire = "L'agent ne prend rien."
     
     # Pour DONNER
+    def is_rightP(self,IDAgent):
+        target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
+        r = self.get_residentInfoByRID(target)
+        if r is None:
+            return False  
+        return dist(self.agentsPosTerrain[IDAgent], r['position']) == 1
+
     def donnerAgent(self,IDAgent):
         def is_valideItem(IDAgent,item):
             data = self.get_demandeAllInfoFromIDAgent(IDAgent)
-            return item['objet'] in data["PossibleObjects"].keys() # Lucas : mdr tu avais mis que item alors que item cest {'emotion': 'tristesse', 'intensite': 'moyenne', 'objet': 'couverture'}
+            return item['objet'] in data["PossibleObjects"].keys()
         
         def updateData(IDAgent,item):
             data = self.get_demandeAllInfoFromIDAgent(IDAgent)
@@ -327,14 +345,15 @@ class Environment:
                 self.demandes[i]["repli"] = data["PossibleObjects"][item["objet"]]
                 self.demandes[i]["succes"] = True
                 self.commentaire = "L'agent a livré l'objet. Le résident est satisfait"
+                print("l'agent donne l'objet, l'objet est correcte")
             else:
-                #self.demandes[i]["motif_echec"] = self.agents.errorMsg if self.agents.errorMsg is not None else "l'agent s'est trompé d'objet" # Lucas : ca marche pas errorMsg
                 self.commentaire = "L'agent a livré l'objet. Le résident commence a pleuré (pas le bon objet)."
+                print("l'agent donne l'objet, n'est pas correcte")
             
         target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
         ## Lucas : GROS PROBLEME YASSINE (en vrai pas autant juste target cest R1 ... mais dans la perception cest P pour tous les residents, moi j'ai fait un check dans case livraison de l'agent)
         # if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():  (ta ligne)
-        if 'P' not in self.get_NeuMannVisionBYidAgent(IDAgent).values(): 
+        if 'P' not in self.get_NeuMannVisionBYidAgent(IDAgent).values() and not self.is_rightP(IDAgent): 
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'est à porter du resident",target)
             self.commentaire = "L'agent n'est pas à porter du résident à qui il doit livrer.("+target+")"
         elif self.agentsInventory[IDAgent] is None:
@@ -343,12 +362,13 @@ class Environment:
         else:
             item = self.agentsInventory[IDAgent]
             self.agentsInventory[IDAgent] = None
+            print("l'agent donne l'objet")
             
             updateData(IDAgent,item)
 
  # ===================================================================
 
- # ================ Main Script =====================
+ # ================ UnderMain Script Utils =====================
     def makeAgentNextMove(self):            
         actions = self.get_agentsActions()
         for i in range(len(actions)):
@@ -366,6 +386,17 @@ class Environment:
             a.compute_NextMove()
 
         self.makeAgentNextMove()
+
+    def is_allAgentOff(self):
+        return any([a.on for a in self.agents])
+# ==================================================
+
+# ================ Main Script =====================
+
+    def run(self):
+        while self.is_allAgentOff():
+            self.timeStep()
+            print("step")
 
 # ==================================================
 
@@ -386,3 +417,37 @@ class Environment:
         for key in self.armoire.keys():
             print(f"\t{key}: ",self.armoire[key])
         return ""
+
+def getPossibleObjects(armoire, emotion, intensite):
+
+    intensiteIndex = intensites.index(intensite)
+    emotionIndex = emotions.index(emotion)
+
+    possibleObjects = {}
+    candidats = MouvementDansArmoire.findCandidat(None, intensiteIndex, emotionIndex)
+    objet = None
+    repli = 'armoire vide'
+
+    for i, e in candidats:
+
+        objet = armoire['casiers'][i * 8 + e]['objet']
+
+        if objet is not None:
+            if (i, e) == (intensiteIndex, emotionIndex):
+                repli = 'aucun'
+            elif e == emotionIndex:
+                repli = 'intensite'
+            else:
+                distance = abs(emotionIndex - e)
+                distance = min(distance, 8 - distance)
+                repli = 'voisine_' + str(distance)
+
+            possibleObjects[objet] = repli
+
+    if possibleObjects == {}:
+        possibleObjects[objet] = (repli, (i,e))
+
+    return possibleObjects
+
+def dist(pos1, pos2):
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])

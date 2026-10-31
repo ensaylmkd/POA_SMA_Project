@@ -40,29 +40,27 @@ def main(argv):
      )
 
     env = Environment(carte,scenario,dictionnaire,armoire,trace)
-    a = [cle for cle in env.demandes if cle != "PossibleObjects"]
+    # a = [cle for cle in env.demandes if cle != "PossibleObjects"]
     
     # for key in a:
     #     print(key, env.demandes[key])
     #     print()
     #     print()
 
-    agentInfo = env.get_initAgent_info()
-    for key in agentInfo.keys() :
-        print(key, agentInfo[key])
-    print()
+    # agentInfo = env.get_initAgent_info()
+    # for key in agentInfo.keys() :
+    #     print(key, agentInfo[key])
+    # print()
 
-    print(env.get_perception(0))
+    
 
-    # print(env.casiers)
+    # # print(env.casiers)
 
-    def printMap():
-        for i in range(len(carte["grille"])):
-            print(env.grid[i])
+    # def printMap():
+    #     for i in range(len(carte["grille"])):
+    #         print(env.grid[i])
 
-    printMap()
-    for i in range(300):
-        env.timeStep()
+    env.run()
     
     trace.ecrire(chemin_sortie)
     print(f"\ntrace ecrite : {chemin_sortie}")

@@ -1,4 +1,4 @@
-from parcours import *
+from src.parcours import *
 
 class Arbre:
     def __init__(self, valeur,  pere=None):

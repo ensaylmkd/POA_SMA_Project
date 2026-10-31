@@ -1,4 +1,4 @@
-from parcours import *
+from src.parcours import *
 
 class MouvementDansMap:
     def __init__(self, agent, posDepart, posObjectif, carte):
