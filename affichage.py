@@ -1,205 +1,232 @@
 #!/usr/bin/env python3
 
 import sys
+from copy import deepcopy
 from pathlib import Path
-import time
 import tkinter as tk
 
 import reconfort_io as rio
 
+
 TAILLE_CASE_AFFICHAGE = 30
 DELAI_AFFICHAGE = 50
 
-# Couleurs de la carte
+
 COULEURS = {
-    '#': '#4a4a4a',   # mur
-    ' ': '#f8f9fa',   # case inexplorée
-    '.': '#cccccc',   # case exploré
-    'R': '#e63946',   # robot
-    'P': '#f4a261',   # personne
-    'A': "#70574e",   # armoire
-    'D': '#2a9d8f',   # dictionnaire
+    "#": "#4a4a4a",
+    " ": "#f8f9fa",
+    ".": "#cccccc",
+    "R": "#e63946",
+    "P": "#f4a261",
+    "A": "#70574e",
+    "D": "#2a9d8f",
 }
 
-# Couleurs des cases perçues
 COULEURS_FONCEES = {
-    '#': '#2b2b2b',   # mur
-    ' ': '#dcdfe4',   # case inexplorée
-    '.': '#b0b0b0',   # sol exploré
-    'R': '#c1121f',   # robot
-    'P': '#d97706',   # personne
-    'A': "#5e4138",   # armoire
-    'D': '#1f7a6f',   # dictionnaire
+    "#": "#2b2b2b",
+    " ": "#dcdfe4",
+    ".": "#b0b0b0",
+    "R": "#c1121f",
+    "P": "#d97706",
+    "A": "#5e4138",
+    "D": "#1f7a6f",
 }
 
-# Couleurs de l'intensité des émotions dans l'armoire
 COULEURS_INTENSITE = {
-    0: "#3dc000",   # intensité 1 : vert clair
-    1: "#e2751c",   # intensité 2 : orange
-    2: "#c71212",   # intensité 3 : rouge
+    0: "#3dc000",
+    1: "#e2751c",
+    2: "#c71212",
 }
+
 
 #######################################################
 ######################    MAP    ######################
 #######################################################
+
 def initMap(mapCharged):
-    width=len(mapCharged[0])
-    height=len(mapCharged)
+    hauteur = len(mapCharged)
+    largeur = len(mapCharged[0])
 
-    map = [['#' for _ in range(width)] for _ in range(height)]
+    carte = [
+        ["#" for _ in range(largeur)]
+        for _ in range(hauteur)
+    ]
 
-    for r in range(1, height - 1):
-        for c in range(1, width - 1):
-            map[r][c] = ' '
+    for ligne in range(1, hauteur - 1):
+        for colonne in range(1, largeur - 1):
+            carte[ligne][colonne] = " "
 
-    return map
+    return carte
 
-def updateMap(position, perception, map):
-    r, c = position
 
-    perçues = []
+def updateMap(position, perception, carte):
+    ligne, colonne = position
+    hauteur = len(carte)
+    largeur = len(carte[0])
+    percues = []
 
-    if map[r - 1][c] == ' ' or map[r - 1][c] == 'R':
-        map[r - 1][c] = perception['N']
-    perçues.append((r - 1, c))
+    # Effacer l'ancienne position du robot.
+    for rangee in carte:
+        for indice, valeur in enumerate(rangee):
+            if valeur == "R":
+                rangee[indice] = "."
 
-    if map[r + 1][c] == ' ' or map[r + 1][c] == 'R':
-        map[r + 1][c] = perception['S']
-    perçues.append((r + 1, c))
+    directions = {
+        "N": (-1, 0),
+        "S": (1, 0),
+        "E": (0, 1),
+        "O": (0, -1),
+    }
 
-    if map[r][c + 1] == ' ' or map[r][c + 1] == 'R':
-        map[r][c + 1] = perception['E']
-    perçues.append((r, c + 1))
+    for direction, (dl, dc) in directions.items():
+        l = ligne + dl
+        c = colonne + dc
 
-    if map[r][c - 1] == ' ' or map[r][c - 1] == 'R':
-        map[r][c - 1] = perception['O']
-    perçues.append((r, c - 1))
+        if not (0 <= l < hauteur and 0 <= c < largeur):
+            continue
 
-    map[r][c] = 'R'
+        if direction not in perception:
+            continue
 
-    return map, perçues
+        if carte[l][c] in (" ", "R"):
+            carte[l][c] = perception[direction]
 
-def drawMap(canvas, map, perçues, resident):
+        percues.append((l, c))
+
+    carte[ligne][colonne] = "R"
+
+    return carte, percues
+
+
+def drawMap(canvas, carte, percues, residents):
     canvas.delete("all")
 
-    height = len(map)
-    width = len(map[0])
+    positions_residents = {
+        tuple(resident["position"]): resident["id"]
+        for resident in residents
+    }
 
-    for r in range(height):
-        for c in range(width):
-            case = map[r][c]
+    percues = set(percues)
 
-            if (r, c) in perçues:
-                couleur = COULEURS_FONCEES.get(case, '#bbbbbb')
-            else:
-                couleur = COULEURS.get(case, '#cccccc')
+    for ligne, rangee in enumerate(carte):
+        for colonne, case in enumerate(rangee):
+            palette = (
+                COULEURS_FONCEES
+                if (ligne, colonne) in percues
+                else COULEURS
+            )
 
-            x1 = c * TAILLE_CASE_AFFICHAGE
-            y1 = r * TAILLE_CASE_AFFICHAGE
+            couleur = palette.get(case, "#cccccc")
+
+            x1 = colonne * TAILLE_CASE_AFFICHAGE
+            y1 = ligne * TAILLE_CASE_AFFICHAGE
             x2 = x1 + TAILLE_CASE_AFFICHAGE
             y2 = y1 + TAILLE_CASE_AFFICHAGE
 
             canvas.create_rectangle(
                 x1, y1, x2, y2,
                 fill=couleur,
-                outline="#888888"
+                outline="#888888",
             )
 
-            if case == 'R':
+            if case == "R":
                 canvas.create_text(
                     (x1 + x2) // 2,
                     (y1 + y2) // 2,
                     text="R",
                     font=("Arial", 16, "bold"),
-                    fill="#ffffff"
+                    fill="white",
                 )
 
-            if case == 'P':
-                for res in resident:
-                    if res['position'] == [r, c]:
-                        canvas.create_text(
-                            (x1 + x2) // 2,
-                            (y1 + y2) // 2,
-                            text=res['id'],
-                            font=("Arial", 12, "bold"),
-                            fill="#ffffff"
-                        )
-                        break
+            elif case == "P":
+                identifiant = positions_residents.get(
+                    (ligne, colonne), "P"
+                )
+
+                canvas.create_text(
+                    (x1 + x2) // 2,
+                    (y1 + y2) // 2,
+                    text=identifiant,
+                    font=("Arial", 12, "bold"),
+                    fill="white",
+                )
+
 
 #######################################################
 ######################  ARMOIRE  ######################
 #######################################################
+
 def initMapArmoire():
-    nb_colonnes = 8
-    nb_lignes = 3
-
-    map_armoire = [['?' for _ in range(nb_colonnes)] for _ in range(nb_lignes)]
-
-    return map_armoire
+    return [["?" for _ in range(8)] for _ in range(3)]
 
 
-def updateMapArmoire(coord_casier, map_armoire, contenucasiers):
+def updateMapArmoire(coord_casier, map_armoire, contenu):
     intensite, emotion = coord_casier
-
-    map_armoire[intensite][emotion] = contenucasiers
-
+    map_armoire[intensite][emotion] = contenu
     return map_armoire
+
 
 def prendreMapArmoire(coord_casier, map_armoire):
-    intensite, emotion = coord_casier
-
-    map_armoire[intensite][emotion] = ''
-    
-    return map_armoire
+    return updateMapArmoire(coord_casier, map_armoire, "")
 
 
-def drawMapArmoire(canvas, map_armoire, emotions, perçues):
+def drawMapArmoire(canvas, map_armoire, emotions, percues):
     canvas.delete("all")
 
-    height = 3         
-    width = 8       
+    hauteur = 3
+    largeur = 8
+    taille_bloc = 3 * TAILLE_CASE_AFFICHAGE
 
-    TAILLE_BLOC = 3 * TAILLE_CASE_AFFICHAGE   
-
-    largeur_armoire = width * TAILLE_BLOC
-    hauteur_armoire = height * TAILLE_BLOC
+    largeur_armoire = largeur * taille_bloc
+    hauteur_armoire = hauteur * taille_bloc
 
     canvas.create_rectangle(
-        0,
-        25,
-        largeur_armoire,
-        hauteur_armoire + 25,
-        fill=COULEURS['A'],
-        outline=""
+        0, 25,
+        largeur_armoire, hauteur_armoire + 25,
+        fill=COULEURS["A"],
+        outline="",
     )
 
-    for r in range(height):
-        for c in range(width):
-            case = map_armoire[r][c]
-            vue = [r,c] == perçues
+    for ligne in range(hauteur):
+        for colonne in range(largeur):
+            case = map_armoire[ligne][colonne]
 
-            for sr in range(3):
-                for sc in range(3):
-                    x1 = c * TAILLE_BLOC + sc * TAILLE_CASE_AFFICHAGE
-                    y1 = r * TAILLE_BLOC + sr * TAILLE_CASE_AFFICHAGE + 25
-                    x2 = x1 + TAILLE_CASE_AFFICHAGE
-                    y2 = y1 + TAILLE_CASE_AFFICHAGE
+            vue = (
+                percues is not None
+                and tuple(percues) == (ligne, colonne)
+            )
 
-                    if sr < 2:
-                        remplissage = COULEURS_INTENSITE[r]
+            for sous_ligne in range(3):
+                for sous_colonne in range(3):
+                    x1 = (
+                        colonne * taille_bloc
+                        + sous_colonne * TAILLE_CASE_AFFICHAGE
+                    )
+
+                    y1 = (
+                        ligne * taille_bloc
+                        + sous_ligne * TAILLE_CASE_AFFICHAGE
+                        + 25
+                    )
+
+                    if sous_ligne < 2:
+                        remplissage = COULEURS_INTENSITE[ligne]
                     elif vue:
-                        remplissage = "#5d4037"  
+                        remplissage = "#5d4037"
                     else:
                         remplissage = ""
 
                     canvas.create_rectangle(
-                        x1, y1, x2, y2,
+                        x1,
+                        y1,
+                        x1 + TAILLE_CASE_AFFICHAGE,
+                        y1 + TAILLE_CASE_AFFICHAGE,
                         fill=remplissage,
-                        outline="#888888"
+                        outline="#888888",
                     )
 
-            x_centre = c * TAILLE_BLOC + TAILLE_BLOC // 2
-            y_centre = r * TAILLE_BLOC + TAILLE_BLOC // 2 + 25
+            x_centre = colonne * taille_bloc + taille_bloc // 2
+            y_centre = ligne * taille_bloc + taille_bloc // 2 + 25
 
             if vue:
                 canvas.create_polygon(
@@ -207,53 +234,53 @@ def drawMapArmoire(canvas, map_armoire, emotions, perçues):
                     x_centre + 15, y_centre + 40,
                     x_centre, y_centre + 12,
                     fill="#ffd166",
-                    outline="#3f2d20"
+                    outline="#3f2d20",
                 )
 
             if case:
-                texte = case if len(case) <= 8 else case[:7] + "…"
+                texte = str(case)
+
+                if len(texte) > 8:
+                    texte = texte[:7] + "…"
+
                 canvas.create_text(
                     x_centre,
                     y_centre,
                     text=texte,
                     font=("Arial", 12, "bold"),
-                    fill="#3f2d20"
+                    fill="#3f2d20",
                 )
 
-    for i in range(width + 1):
-        x = i * TAILLE_BLOC
+    for indice in range(largeur + 1):
+        x = indice * taille_bloc
 
-        if i == 0:
+        if indice == 0:
             x = 3
 
         canvas.create_line(
             x, 25,
             x, hauteur_armoire + 25,
-            fill=COULEURS['A'],
-            width=3
+            fill=COULEURS["A"],
+            width=3,
         )
 
-    for i, emotion in enumerate(emotions):
-        x_centre = i * TAILLE_BLOC + TAILLE_BLOC // 2
-
+    for indice, emotion in enumerate(emotions):
         canvas.create_text(
-            x_centre,
+            indice * taille_bloc + taille_bloc // 2,
             12,
             text=emotion,
             font=("Arial", 11, "bold"),
-            fill="black"
+            fill="black",
         )
 
 
 #######################################################
-#####################   UTILS   #######################
+#####################  FENÊTRE  #######################
 #######################################################
-def initDrawing(trace, map):
-    height = len(map)
-    width = len(map[0])
 
-    height_armoire = 3 * 3
-    width_armoire = 8 * 3
+def initDrawing(trace, carte):
+    hauteur = len(carte)
+    largeur = len(carte[0])
 
     root = tk.Tk()
     root.title("Visualisation du robot")
@@ -264,14 +291,14 @@ def initDrawing(trace, map):
     label_pas = tk.Label(
         header,
         text=f"Pas 0 / {len(trace['pas'])}",
-        font=("Arial", 14, "bold")
+        font=("Arial", 14, "bold"),
     )
     label_pas.pack(side="left", padx=10, pady=5)
 
     label_liv = tk.Label(
         header,
         text=f"Livraison 0 / {trace['resume']['demandes']}",
-        font=("Arial", 14, "bold")
+        font=("Arial", 14, "bold"),
     )
     label_liv.pack(side="right", padx=10, pady=5)
 
@@ -280,113 +307,432 @@ def initDrawing(trace, map):
 
     canvas = tk.Canvas(
         zone,
-        width=width * TAILLE_CASE_AFFICHAGE,
-        height=height * TAILLE_CASE_AFFICHAGE,
-        bg="white"
+        width=largeur * TAILLE_CASE_AFFICHAGE,
+        height=hauteur * TAILLE_CASE_AFFICHAGE,
+        bg="white",
     )
-    canvas.pack()
 
     canvas_armoire = tk.Canvas(
         zone,
-        width=width_armoire * TAILLE_CASE_AFFICHAGE,
-        height=height_armoire * TAILLE_CASE_AFFICHAGE + 25,
-        bg="white"
+        width=8 * 3 * TAILLE_CASE_AFFICHAGE,
+        height=3 * 3 * TAILLE_CASE_AFFICHAGE + 25,
+        bg="white",
     )
-    canvas_armoire.pack_forget()
 
-    hand = tk.Frame(root)
-    hand.pack(fill="x")
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill="x")
 
     label_hand = tk.Label(
-        hand,
+        main_frame,
         text="Main : vide",
-        font=("Arial", 14, "bold")
+        font=("Arial", 14, "bold"),
     )
     label_hand.pack(side="left", padx=8, pady=8)
 
-    root.update()
+    label_action = tk.Label(
+        main_frame,
+        text="Action : aucune",
+        font=("Arial", 14, "bold"),
+    )
+    label_action.pack(side="right", padx=8, pady=8)
 
-    return root, canvas, canvas_armoire, label_pas, label_liv, label_hand
+    return (
+        root,
+        canvas,
+        canvas_armoire,
+        label_pas,
+        label_liv,
+        label_hand,
+        label_action,
+    )
+
 
 #######################################################
 ######################   MAIN   #######################
 #######################################################
+
 def main(argv):
     if len(argv) != 2:
-        print(__doc__.strip())
+        print(
+            f"Usage : {argv[0]} chemin_trace.json",
+            file=sys.stderr,
+        )
         return 2
 
     chemin_trace = Path(argv[1])
 
     try:
         trace = rio.charger_trace(chemin_trace)
-        carte = rio.charger_carte("cartes/" + trace["carte"] + ".json")
-        scenario = rio.charger_scenario("scenarios/" + trace["scenario"] + ".json")
-        armoire = rio.charger_armoire("donnees/" + scenario["armoire"] + ".json")
+
+        carte = rio.charger_carte(
+            "cartes/" + trace["carte"] + ".json"
+        )
+
+        scenario = rio.charger_scenario(
+            "scenarios/" + trace["scenario"] + ".json"
+        )
+
+        armoire = rio.charger_armoire(
+            "donnees/" + scenario["armoire"] + ".json"
+        )
+
     except rio.ErreurFichier as err:
         print(f"erreur de chargement : {err}", file=sys.stderr)
         return 1
 
-    map = initMap(carte['grille'])
-    map_armoire = initMapArmoire()
-    resident = carte['residents']
+    pas = trace["pas"]
+    nombre_pas = len(pas)
+    residents = carte["residents"]
 
-    root, canvas, canvas_armoire, label_pas, label_liv, label_hand = initDrawing(trace, map)
+    (
+        root,
+        canvas,
+        canvas_armoire,
+        label_pas,
+        label_liv,
+        label_hand,
+        label_action,
+    ) = initDrawing(trace, initMap(carte["grille"]))
 
-    p=0
-    l=0
+    # L'état 0 correspond à la situation avant le premier pas.
+    historique = [{
+        "carte": initMap(carte["grille"]),
+        "armoire": initMapArmoire(),
+        "contenu_casiers": [
+            deepcopy(casier["objet"])
+            for casier in armoire["casiers"]
+        ],
+        "percues": [],
+        "casier": None,
+        "dans_armoire": False,
+        "main": "vide",
+        "livraisons": 0,
+    }]
 
-    dans_armoire = False
+    position = 0
+    lecture = False
+    minuterie = None
 
-    for step in trace["pas"]:
-        p += 1
-        label_pas.config(text=f"Pas {p} / {len(trace['pas'])}")
-        label_liv.config(text=f"Livraison {l} / {trace['resume']['demandes']}")
+    def action_du_pas(step):
+        return str(step.get("action", "")).strip().upper()
 
-        if "action" in step and step["action"] == "CHERCHER" and not dans_armoire:
+    def est_action_importante(step):
+        action = action_du_pas(step)
+
+        return bool(action) and action not in {
+            "AVANCER",
+            "CHERCHER",
+        }
+
+    def calculer_etat(etat_precedent, step):
+        etat = deepcopy(etat_precedent)
+        action = action_du_pas(step)
+
+        if action == "CHERCHER":
+            etat["dans_armoire"] = True
+
+        if action == "PRENDRE":
+            casier = step["casier"]
+            intensite, emotion = casier
+            indice_casier = intensite * 8 + emotion
+
+            # Vider le contenu réel et le contenu affiché du casier.
+            etat["contenu_casiers"][indice_casier] = ""
+            prendreMapArmoire(casier, etat["armoire"])
+
+            etat["casier"] = casier
+            etat["main"] = str(step["argument"]).lower()
+            etat["dans_armoire"] = False
+
+        elif action == "DONNER":
+            etat["main"] = "vide"
+
+            # Comptage conservé depuis le code initial.
+            livraisons = trace.get("livraisons", [])
+            indice = etat["livraisons"]
+
+            if indice < len(livraisons) and livraisons[indice]:
+                etat["livraisons"] += 1
+
+        elif etat["dans_armoire"]:
+            casier = step.get("casier")
+
+            if casier is not None:
+                intensite, emotion = casier
+                indice_casier = intensite * 8 + emotion
+
+                # Utiliser le contenu actuel, pas le contenu initial.
+                objet = etat["contenu_casiers"][indice_casier]
+
+                updateMapArmoire(
+                    casier,
+                    etat["armoire"],
+                    objet,
+                )
+
+                etat["casier"] = casier
+
+        elif "position" in step and "perception" in step:
+            etat["carte"], etat["percues"] = updateMap(
+                step["position"],
+                step["perception"],
+                etat["carte"],
+            )
+
+        return etat
+
+    def afficher_etat():
+        etat = historique[position]
+
+        label_pas.config(
+            text=f"Pas {position} / {nombre_pas}"
+        )
+
+        label_liv.config(
+            text=(
+                f"Livraison {etat['livraisons']} / "
+                f"{trace['resume']['demandes']}"
+            )
+        )
+
+        label_hand.config(text=f"Main : {etat['main']}")
+
+        action = (
+            action_du_pas(pas[position - 1])
+            if position > 0
+            else ""
+        )
+
+        label_action.config(
+            text=f"Action : {action or 'aucune'}"
+        )
+
+        if etat["dans_armoire"]:
             canvas.pack_forget()
-            canvas_armoire.pack(side="left", padx=10, pady=10)
-            dans_armoire = True
-            drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
-            root.update()
-            root.after(DELAI_AFFICHAGE * 5)
-            
 
-        if "action" in step and step["action"] == "PRENDRE" and dans_armoire:
-            map_armoire = updateMapArmoire(step['casier'], map_armoire, "")
-            drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
-            item = step["argument"].lower()
+            if not canvas_armoire.winfo_manager():
+                canvas_armoire.pack(padx=10, pady=10)
 
-            label_hand.config(text=f"Main : {item}")
-
-            root.update()
-            root.after(DELAI_AFFICHAGE * 5)
-
-            canvas_armoire.pack_forget()
-            canvas.pack(side="left", padx=10, pady=10)
-            dans_armoire = False
-
-        
-        elif "action" in step and step["action"] == "DONNER":
-            label_hand.config(text=f"Main : vide")
-        # Lucas : A decommenter si il y a livraison dans la trace
-            if trace["livraisons"][l]:
-                l+=1
+            drawMapArmoire(
+                canvas_armoire,
+                etat["armoire"],
+                armoire["emotions"],
+                etat["casier"],
+            )
 
         else:
-            if dans_armoire:
-                map_armoire = updateMapArmoire(step['casier'], map_armoire, armoire['casiers'][step['casier'][0] * 8 + step['casier'][1]]['objet'])
-                drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+            canvas_armoire.pack_forget()
 
-                root.update()
-                root.after(DELAI_AFFICHAGE * 5) 
-            else:
-                map, perçues = updateMap(step['position'], step['perception'], map)
-                drawMap(canvas, map, perçues, resident)
+            if not canvas.winfo_manager():
+                canvas.pack(padx=10, pady=10)
 
-        root.update()
-        root.after(DELAI_AFFICHAGE)
+            drawMap(
+                canvas,
+                etat["carte"],
+                etat["percues"],
+                residents,
+            )
 
+        etat_arriere = (
+            tk.NORMAL if position > 0 else tk.DISABLED
+        )
+
+        etat_avant = (
+            tk.NORMAL if position < nombre_pas else tk.DISABLED
+        )
+
+        bouton_reculer.config(state=etat_arriere)
+        bouton_action_precedente.config(state=etat_arriere)
+
+        bouton_avancer.config(state=etat_avant)
+        bouton_action_suivante.config(state=etat_avant)
+
+        # Pause reste disponible pendant une animation.
+        bouton_lecture.config(
+            text="Pause ⏸" if lecture else "Lecture ▶",
+            state=tk.NORMAL if lecture else etat_avant,
+        )
+
+    def aller_a(cible):
+        nonlocal position
+
+        cible = max(0, min(cible, nombre_pas))
+
+        # Mémoriser les états pour permettre le retour en arrière.
+        while len(historique) <= cible:
+            indice_pas = len(historique) - 1
+
+            nouvel_etat = calculer_etat(
+                historique[-1],
+                pas[indice_pas],
+            )
+
+            historique.append(nouvel_etat)
+
+        position = cible
+        afficher_etat()
+
+    def pause():
+        nonlocal lecture, minuterie
+
+        lecture = False
+
+        if minuterie is not None:
+            root.after_cancel(minuterie)
+            minuterie = None
+
+        bouton_lecture.config(
+            text="Lecture ▶",
+            state=(
+                tk.NORMAL
+                if position < nombre_pas
+                else tk.DISABLED
+            ),
+        )
+
+    def delai_etat_courant():
+        delai = DELAI_AFFICHAGE
+
+        if position > 0:
+            action = action_du_pas(pas[position - 1])
+
+            if (
+                historique[position]["dans_armoire"]
+                or action == "PRENDRE"
+            ):
+                delai += DELAI_AFFICHAGE * 5
+
+        return delai
+
+    def avancer():
+        pause()
+        aller_a(position + 1)
+
+    def reculer():
+        pause()
+        aller_a(position - 1)
+
+    def animer_jusqua(cible):
+        nonlocal lecture, minuterie
+
+        pause()
+
+        cible = max(0, min(cible, nombre_pas))
+
+        if cible == position:
+            return
+
+        direction = 1 if cible > position else -1
+
+        lecture = True
+
+        bouton_lecture.config(
+            text="Pause ⏸",
+            state=tk.NORMAL,
+        )
+
+        def etape():
+            nonlocal minuterie
+
+            minuterie = None
+
+            if not lecture:
+                return
+
+            aller_a(position + direction)
+
+            if position == cible:
+                pause()
+                return
+
+            minuterie = root.after(
+                delai_etat_courant(),
+                etape,
+            )
+
+        etape()
+
+    def action_suivante():
+        cible = nombre_pas
+
+        for indice in range(position, nombre_pas):
+            if est_action_importante(pas[indice]):
+                cible = indice + 1
+                break
+
+        animer_jusqua(cible)
+
+    def action_precedente():
+        cible = 0
+
+        # Ignorer le pas actuellement affiché.
+        for indice in range(position - 2, -1, -1):
+            if est_action_importante(pas[indice]):
+                cible = indice + 1
+                break
+
+        animer_jusqua(cible)
+
+    def basculer_lecture():
+        if lecture:
+            pause()
+        else:
+            animer_jusqua(nombre_pas)
+
+    def fermer():
+        pause()
+        root.destroy()
+
+    controles = tk.Frame(root)
+    controles.pack(fill="x", padx=10, pady=10)
+
+    bouton_reculer = tk.Button(
+        controles,
+        text="← Pas",
+        command=reculer,
+    )
+
+    bouton_avancer = tk.Button(
+        controles,
+        text="Pas →",
+        command=avancer,
+    )
+
+    bouton_action_precedente = tk.Button(
+        controles,
+        text="← Action",
+        command=action_precedente,
+    )
+
+    bouton_action_suivante = tk.Button(
+        controles,
+        text="Action →",
+        command=action_suivante,
+    )
+
+    bouton_lecture = tk.Button(
+        controles,
+        text="Lecture ▶",
+        command=basculer_lecture,
+    )
+
+    for bouton in (
+        bouton_reculer,
+        bouton_avancer,
+        bouton_action_precedente,
+        bouton_action_suivante,
+        bouton_lecture,
+    ):
+        bouton.pack(
+            side="left",
+            expand=True,
+            fill="x",
+            padx=3,
+        )
+
+    root.protocol("WM_DELETE_WINDOW", fermer)
+
+    afficher_etat()
     root.mainloop()
 
     return 0

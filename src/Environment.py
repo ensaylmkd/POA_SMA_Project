@@ -152,10 +152,15 @@ class Environment:
         'posTerrain': [6, 1], 
         'posCasier': [1, 0]}
         """
-        x2,y2 = self.agentsPosCasier[IDAgent]
+        
+        contcas = None
+        if 'A' in self.get_NeuMannVisionBYidAgent(IDAgent).values():
+            x2,y2 = self.agentsPosCasier[IDAgent]
+            contcas= self.get_item(x2,y2)
+
         return {
             'perception':self.get_NeuMannVisionBYidAgent(IDAgent),
-            'contenu_casier': self.get_item(x2,y2),
+            'contenu_casier': contcas,
             'posTerrain': self.agentsPosTerrain[IDAgent],
             'posCasier': self.agentsPosCasier[IDAgent],
             'InfoDemande': self.agentsDemandesData[IDAgent][1],
@@ -415,7 +420,8 @@ class Environment:
         return ""
 
 def getPossibleObjects(armoire, emotion, intensite):
-
+    if [emotion,intensite] == [None,None]:
+        return None 
     intensiteIndex = intensites.index(intensite)
     emotionIndex = emotions.index(emotion)
 

@@ -38,7 +38,7 @@ def findEmotionIntensite(messageNorm):
         for ent in dico['entrees']:
             if elt in ent['formes']:
                 return [ent['intensite'], ent['emotion']]
-    return None
+    return [None,None]
 
 def EmotionInfoFromSentence(texte):
     return findEmotionIntensite(normaliser(texte))

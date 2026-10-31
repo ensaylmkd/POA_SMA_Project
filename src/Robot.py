@@ -51,11 +51,20 @@ class Robot:
         if self.requete is None or not self.on:
             self.requete = self.environment.get_NextDemande(self.IDAgent)
             self.checkRequest()
-            
+
 
         if self.is_etatfinish and self.on:
             self.nextState()
             self.is_etatfinish = False
+        
+        if self.newinfo["InfoDemande"] == [None,None]:
+            self.errorMsg = 'emotion indeterminee'
+            self.requete = self.environment.get_NextDemande(self.IDAgent)
+            self.checkRequest()
+            self.etat = "DICTIONNAIRE"
+            
+
+
         
         self.actionMaker.updateState()
     
@@ -81,27 +90,23 @@ class Robot:
                         if not isinstance(self.actionMaker, MouvementDansArmoire):
                             self.actionMaker = MouvementDansArmoire(self, self.newinfo['posCasier'], self.newinfo['InfoDemande'][1], self.newinfo['InfoDemande'][0])
                         self.nextMove = self.actionMaker.nextAction()
-                        self.is_etatfinish = self.actionMaker.repli != None
+                        if self.actionMaker.repli != None:
+                            if self.actionMaker.repli == 'armoire vide':
+                                self.errorMsg = 'armoire vide'
+                            self.is_etatfinish = True
                     else: # sinon action Avancer qui se rapproche de l'armoire
                         self.actionMaker = MouvementDansMap(self, self.newinfo['posTerrain'], self.infoDeBase['armoirePos'], self.carte_mental)
                         self.nextMove = self.actionMaker.nextAction()
                 case "LIVRAISON":
                     r = self.environment.get_residentInfoByRID(self.requete['resident'])
-                    if r is None :
-                        self.nextMove = ["ATTENDRE", ""]
+                    posResident = r["position"]
+                    if 'P' in self.newinfo['perception'].values() and dist(self.newinfo['posTerrain'], posResident) == 1: # si à coter de recepteur return action Donner
+                        self.nextMove = ["DONNER", ""]
                         self.requete = None 
                         self.is_etatfinish = True
-                        self.errorMsg = "Le résident n'existe pas"
-                    
-                    else:
-                        posResident = r["position"]
-                        if 'P' in self.newinfo['perception'].values() and dist(self.newinfo['posTerrain'], posResident) == 1: # si à coter de recepteur return action Donner
-                            self.nextMove = ["DONNER", ""]
-                            self.requete = None 
-                            self.is_etatfinish = True
-                        else: # sinon action Avancer se rapprocher du recepteur
-                            self.actionMaker = MouvementDansMap(self, self.newinfo['posTerrain'], posResident, self.carte_mental)
-                            self.nextMove = self.actionMaker.nextAction()
+                    else: # sinon action Avancer se rapprocher du recepteur
+                        self.actionMaker = MouvementDansMap(self, self.newinfo['posTerrain'], posResident, self.carte_mental)
+                        self.nextMove = self.actionMaker.nextAction()
     
     def get_NeuMannVisionBYpos(self,x,y):
         """ Donne la vision N S E O de la grille à la pos @x,@y
@@ -126,17 +131,17 @@ class Robot:
                 self.requete = None
                 return
             if r['id'] in self.innaccessiblePlace:
-                self.errorMsg = "Le résident n'est pas accessible"
+                self.errorMsg = "Le résident est inaccessible"
                 self.requete = None
 
 
 
     def isPossibleToDelivery(self):
         if 'A' in self.innaccessiblePlace:
-            self.errorMsg = "l'armoire n'est pas accessible"
+            self.errorMsg = "l'armoire est inaccessible"
             return False
         if 'D' in self.innaccessiblePlace:
-            self.errorMsg = "le dictionnaire n'est pas accessible"
+            self.errorMsg = "le dictionnaire est inaccessible"
             return False
         return True
     

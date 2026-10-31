@@ -55,48 +55,43 @@ pour son état actuel.
 | `reconfort_io.py` | Fourni : lecture des fichiers JSON et écriture de la trace. |
 | `src/Environment.py` | Chef d'orchestre et simulateur. Stocke les données (carte, armoire, dictionnaire, scénario), crée le `Robot`, définit les règles physiques du monde. À chaque pas : fournit sa perception à l'agent, récupère son action, l'exécute (`AVANCER`, `CONSULTER`, `CHERCHER`, `PRENDRE`, `DONNER`, `ATTENDRE`) et la journalise dans la trace. Calcule aussi les objets acceptables pour chaque demande. |
 | `src/Robot.py` | L'agent. Machine à états `EXPLORER` → `DICTIONNAIRE` → `ARMOIRE` → `LIVRAISON` (puis retour à `DICTIONNAIRE` pour la demande suivante). Il choisit à chaque tour l'action à renvoyer et délègue le « comment » aux `ActionMaker`. |
-| `src/ActionMaker/Explorer.py` | Construit la carte mentale (bord = mur, reste = `?`) à partir des 4 cases perçues et choisit la prochaine case à explorer (la plus proche d'après un parcours en largeur). |
-| `src/ActionMaker/MouvementDansMap.py` | Calcule le trajet vers une case libre adjacente à un objectif (armoire, dictionnaire ou résident) sur la carte mentale. |
-| `src/ActionMaker/MouvementDansArmoire.py` | Règle de la section 6.2 : liste ordonnée des casiers candidats (distance sur la roue, écart d'intensité, intensité faible d'abord, sens horaire d'abord) et suite de `CHERCHER` pour déplacer le sélecteur, avec bouclage des colonnes. |
-| `src/ActionMaker/IActionMaker.py` | Interface commune aux `ActionMaker` (`updateState`, `nextAction`). |
-| `src/parcours.py` | Parcours en largeur écrit à la main (file `deque`), `direction` et `mouvement` pour transformer un chemin en actions. Pas de bibliothèque de plus court chemin. |
+| `src/ActionMaker/Explorer.py` | Construit toute la carte mentale à partir des 4 cases perçues et choisit la prochaine case à explorer (parcours en largeur). |
+| `src/ActionMaker/MouvementDansMap.py` | Calcule le trajet et fournie l'action qui se rapproche des coordonées fournie, souvent un objectif (armoire, dictionnaire ou résident), avec la carte mentale. |
+| `src/ActionMaker/MouvementDansArmoire.py` | liste ordonnée des casiers candidats et produit la suite de `CHERCHER` pour déplacer le sélecteur, avec bouclage des colonnes et ligne. |
+| `src/parcours.py` | Parcours en largeur écrit à la main (file `deque` suggerée), `direction` et `mouvement` pour transformer un chemin en actions. |
 | `src/consultDico.py` | Normalisation des messages (minuscules, sans accents, découpage sur les non-lettres) et recherche du premier mot reconnu dans le dictionnaire (section 6.1). |
 | `affichage.py` | Visionneuse `tkinter` qui rejoue une trace pas à pas. |
 | `test/test.py`, `testparcours.py` | Tests automatisés (voir ci-dessus). |
 | `cartes/`, `scenarios/`, `donnees/` | Entrées : appartements, scénarios, dictionnaire et armoires. |
 | `sorties/` | Traces générées. |
-| `rendu.json` | Contrat d'appel déclaré pour la correction. |
+| `rendu.json` | Pour la correction. |
 
 ### Séparation perception / mémoire / décision / action
 
-- **Perception** : `Environment.get_perception` renvoie au robot les 4 cases adjacentes, la position du sélecteur et le contenu du casier courant. Le robot ne lit jamais la grille du fichier de carte.
-- **Mémoire** : la carte mentale (`Explorer.carte_mental`), partagée avec le `Robot`.
-- **Décision** : `Robot.nextState` / `Robot.compute_NextMove` (choix de l'état et de l'action).
-- **Action** : les `ActionMaker` produisent l'action, `Environment._handleAction` l'exécute et l'écrit dans la trace.
+- **Perception** : `Environment.get_perception` renvoie au robot un packets d'informations qu'il a le droit de lire. sa position, les 4 cases adjacentes, la position du sélecteur, le contenu du casier courant et le résultat de sa lecture. Le robot ne lit jamais la grille du fichier de carte.
+- **Mémoire** : L'environment stock la totalité des informations hors reflexion, l'agent les redemande à chaque tours pour mettre à jour son état et proposer sa prochaine action, les informations  de reflexion seulement comme la carte mentale sont stockées et partagées avec les objets ActionMakers .
+- **Décision** : `Robot.UpdateState`/`Robot.nextState` / `Robot.compute_NextMove`, le robot calcule son état selon les nouvelles informations du tours puis selon son état, le robot choisis une action.
+- **Action** : les `ActionMaker` produisent les actions des agents, ensuite elles sont récupérées par l'Environment`Environment.get_agentsActions` , puis `Environment._handleAction` l'exécute et l'écrit dans la trace.
 
 ## État
 
 **Ce qui marche.**
 
-- Lecture des 4 fichiers, boucle de simulation et écriture de la trace au format `robot-reconfort/trace`.
-- Exploration complète d'une carte à perception locale, avec carte mentale séparée de la carte réelle.
-- Planification en plus court chemin (parcours en largeur écrit à la main) vers une case adjacente à la cible.
-- Lecture du dictionnaire (premier mot reconnu) et calcul de l'ordre des casiers candidats selon la roue de Plutchik.
-- Déplacement du sélecteur dans l'armoire avec bouclage des colonnes.
-- Détection d'un résident muré (cas inaccessible) sans interrompre le scénario.
-- Sur les cartes fournies, 4 scénarios sur 5 (hors `scenario_01`, voir plus bas) livrent la plupart des demandes ; `scenario_03` et `scenario_04` ont 6 livraisons réussies sur 6.
+- boucle de simulation complete et écriture de la trace.
+- Exploration complète d'une carte grace à perception locale, avec carte mentale séparée de la carte réelle.
+- Planification des actions pour réalisé le plus court chemin (parcours en largeur écrit à la main) vers la cible.
+- Lecture du dictionnaire.
+- Déplacement du sélecteur dans l'armoire avec bouclage des lignes et colonnes,calcul de l'ordre des casiers candidats selon la roue de Plutchik.
+- Détection d'un résident inaccessible sans interrompre le scénario.
+- Sur les cartes  et scénarios fournies, Tout les résultats sont ceux attendues mais rarement ne se sont pas déroulé comme prévue(voir ci dessous) .
+
+**Ce qui ne marche pas/ ne va pas**
 
 **Ce qui ne marche pas.**
 
-- **Mauvais objet dans certains replis.** Sur `scenario_02` (1 échec sur 5) et `scenario_05` (1 échec sur 8), le robot livre un objet qui n'est pas dans la liste acceptable (`l'agent s'est trompé d'objet`). Cause probable : dans `MouvementDansArmoire`, le calcul de la distance de repli `voisine_N` utilise la ligne du casier (`[0]`, l'intensité) au lieu de la colonne (`[1]`, l'émotion), et la décision de s'arrêter sur un casier garni ne vérifie pas strictement l'ordre de priorité. À corriger.
-- **Demandes suivantes qui échouent après un résident inaccessible.** Sur `scenario_01` (où `R1` est muré, ce qui est voulu), la demande 4 adressée à `R2`, pourtant accessible, échoue elle aussi avec « le résident n'est pas accessible ». La machine à états du `Robot` ne repart pas proprement après un échec. Cause exacte pas encore identifiée.
-- **Pas de replanification réelle.** Le robot explore d'abord toute la carte, puis planifie sur une carte mentale complète. Il ne découvre donc jamais de mur « en route » : il ne se cogne jamais et ne répare jamais son plan. C'est correct mais coûteux en pas (exploration complète avant la première livraison), et la démonstration vidéo ne peut pas montrer de changement d'itinéraire.
-- **Motifs d'échec non conformes.** Les motifs écrits dans la trace sont des phrases libres (« Le résident n'est pas accessible », « l'agent s'est trompé d'objet ») et non les chaînes attendues par l'énoncé (`resident inaccessible`, `armoire vide`, `emotion indeterminee`). Une demande dont aucun mot n'est reconnu n'est pas traitée explicitement avec `emotion indeterminee`.
-- **Cas « armoire vide » mal géré.** Si les 15 casiers sont vides, le robot envoie `PRENDRE` avec un objet vide au lieu de déclarer l'échec proprement.
-- **Validation des fichiers (section 5.6) non faite.** Seules les vérifications minimales de `reconfort_io.py` sont actives (en-tête `format` / `version`). Grille non rectangulaire, positions incohérentes, doublons, casiers hors armoire, etc. ne sont pas détectés : il n'y a donc pas de code de retour non nul ni de message d'erreur pour ces cas.
-- **Chemin codé en dur.** `src/consultDico.py` charge `donnees/dictionnaire.json` à l'import avec un chemin relatif : le programme ne fonctionne que lancé depuis la racine du projet, et ignore le dossier de données passé en argument.
-- **Tests incomplets.** `test/test.py` ne couvre pas la replanification, la règle de repli complète (casier vide, colonne entière vide, aucun casier garni à distance ≤ 2), la validation des fichiers ni le résident muré sur une grille minuscule. Il importe aussi `affichage` (donc `tkinter`) alors que les tests n'en ont pas besoin. `testparcours.py` échoue à l'import de certains modules (`MouvementDansMap` introuvable) : ses chemins d'import n'ont pas suivi la réorganisation en `src/`.
-- **Sortie console très bavarde.** Chaque action affiche une ligne (`[avancerAgent]Succes: ...`), ce qui noie les messages d'erreur utiles.
+- **Résident non livré au scénario 05.** Ce problème a été trouvé 5 heures avant le rendu. La demande 2 échoue : le casier visé a déjà été vidé par la demande 1, et le robot repart livrer sans objet. Cause probable : il y a un problème non identifier dans notre code Concernant l'état de l'agent `Chercher`, possiblement l'ActionMaker. Dans tout les cas, cette erreur n'est pas reconnu par l'agent.
+- **non conformité à l'énoncé.** Nous avons pris des initiatives qui ne suivent pas exactement l'énoncé mais produise des résultats équivalent qu ce qui est atendue, par exemple perception qui donne à chaque pas plus d'information que se que demande l'énoncé. ce choix s'explique par la volonté de séparé la partie refléxion et le 'corp' de l'agent.
+- **Pas de replanification réelle.** Le robot explore toute la carte avant de livrer, puis planifie une fois sur une carte complète. Il ne découvre jamais de mur en cours de route, ce qui coûte des pas.
 
 ## Vidéo
 
