@@ -83,6 +83,8 @@ def direction(pos1, pos2) :
 def mouvement(chemin) :
     """Pour cr�er une liste afin de bouger l'agent selon chemin"""
     list_action = []
+    if chemin == [] :
+        return None
     for i in range(1, len(chemin)):
         list_action.append(direction(chemin[i-1], chemin[i]))
     return list_action
