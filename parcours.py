@@ -72,14 +72,13 @@ def direction(pos1, pos2) :
     x1 , y1 = pos1
     x2, y2 = pos2
     if x2 == x1 - 1:
-        return ["AVANCER", "HAUT"]
+        return ["AVANCER", "N"]
     elif x2 == x1 + 1:
-        return ["AVANCER", "BAS"]
+        return ["AVANCER", "S"]
     elif y2 == y1 - 1:
-        return ["AVANCER", "GAUCHE"]
+        return ["AVANCER", "O"]
     elif y2 == y1 + 1:
-        return ["AVANCER", "DROITE"]
-
+        return ["AVANCER", "E"]
 
 def mouvement(chemin) :
     """Pour cr�er une liste afin de bouger l'agent selon chemin"""

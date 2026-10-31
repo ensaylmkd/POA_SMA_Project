@@ -7,7 +7,6 @@ import tkinter as tk
 
 import reconfort_io as rio
 
-NB_INTENSITES = 3
 TAILLE_CASE_AFFICHAGE = 30
 DELAI_AFFICHAGE = 50
 
@@ -130,9 +129,9 @@ def drawMap(canvas, map, perçues, resident):
 #######################################################
 ######################  ARMOIRE  ######################
 #######################################################
-def initMapArmoire(emotions):
-    nb_colonnes = len(emotions) 
-    nb_lignes = NB_INTENSITES
+def initMapArmoire():
+    nb_colonnes = 8
+    nb_lignes = 3
 
     map_armoire = [['?' for _ in range(nb_colonnes)] for _ in range(nb_lignes)]
 
@@ -157,8 +156,8 @@ def prendreMapArmoire(coord_casier, map_armoire):
 def drawMapArmoire(canvas, map_armoire, emotions, perçues):
     canvas.delete("all")
 
-    height = len(map_armoire)          
-    width = len(map_armoire[0])        
+    height = 3         
+    width = 8       
 
     TAILLE_BLOC = 3 * TAILLE_CASE_AFFICHAGE   
 
@@ -249,12 +248,12 @@ def drawMapArmoire(canvas, map_armoire, emotions, perçues):
 #######################################################
 #####################   UTILS   #######################
 #######################################################
-def initDrawing(trace, map, emotions):
+def initDrawing(trace, map):
     height = len(map)
     width = len(map[0])
 
-    height_armoire = NB_INTENSITES * 3
-    width_armoire = len(emotions) * 3
+    height_armoire = 3 * 3
+    width_armoire = 8 * 3
 
     root = tk.Tk()
     root.title("Visualisation du robot")
@@ -285,7 +284,7 @@ def initDrawing(trace, map, emotions):
         height=height * TAILLE_CASE_AFFICHAGE,
         bg="white"
     )
-    canvas.pack(side="left", padx=10, pady=10)
+    canvas.pack()
 
     canvas_armoire = tk.Canvas(
         zone,
@@ -293,10 +292,21 @@ def initDrawing(trace, map, emotions):
         height=height_armoire * TAILLE_CASE_AFFICHAGE + 25,
         bg="white"
     )
+    canvas_armoire.pack_forget()
+
+    hand = tk.Frame(root)
+    hand.pack(fill="x")
+
+    label_hand = tk.Label(
+        hand,
+        text="Main : vide",
+        font=("Arial", 14, "bold")
+    )
+    label_hand.pack(side="left", padx=8, pady=8)
 
     root.update()
 
-    return root, canvas, canvas_armoire, label_pas, label_liv
+    return root, canvas, canvas_armoire, label_pas, label_liv, label_hand
 
 #######################################################
 ######################   MAIN   #######################
@@ -318,10 +328,10 @@ def main(argv):
         return 1
 
     map = initMap(carte['grille'])
-    map_armoire = initMapArmoire(armoire['emotions'])
+    map_armoire = initMapArmoire()
     resident = carte['residents']
 
-    root, canvas, canvas_armoire, label_pas, label_liv = initDrawing(trace, map, armoire['emotions'])
+    root, canvas, canvas_armoire, label_pas, label_liv, label_hand = initDrawing(trace, map)
 
     p=0
     l=0
@@ -331,27 +341,44 @@ def main(argv):
     for step in trace["pas"]:
         p += 1
         label_pas.config(text=f"Pas {p} / {len(trace['pas'])}")
+        label_liv.config(text=f"Livraison {l} / {trace['resume']['demandes']}")
 
         if "action" in step and step["action"] == "CHERCHER" and not dans_armoire:
             canvas.pack_forget()
-            canvas_armoire.pack(side="right", padx=10, pady=10)
+            canvas_armoire.pack(side="left", padx=10, pady=10)
             dans_armoire = True
-
-        elif "action" in step and step["action"] == "PRENDRE" and dans_armoire:
-            map_armoire = prendreMapArmoire(step["casier"],map_armoire)
             drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+            root.update()
+            root.after(DELAI_AFFICHAGE * 5)
+            
+
+        if "action" in step and step["action"] == "PRENDRE" and dans_armoire:
+            map_armoire = updateMapArmoire(step['casier'], map_armoire, "")
+            drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+            item = step["argument"].lower()
+
+            label_hand.config(text=f"Main : {item}")
 
             root.update()
-            root.after(DELAI_AFFICHAGE * 10)
+            root.after(DELAI_AFFICHAGE * 5)
 
             canvas_armoire.pack_forget()
             canvas.pack(side="left", padx=10, pady=10)
             dans_armoire = False
-            
+
+        
+        elif "action" in step and step["action"] == "DONNER":
+            label_hand.config(text=f"Main : vide")
+        # Lucas : A decommenter si il y a livraison dans la trace
+        #     if trace["livraison"][l]["success"]:
+        #         l+=1
         else:
             if dans_armoire:
-                map_armoire = updateMapArmoire(step['casier'], map_armoire, step['contenu_casier'])
+                map_armoire = updateMapArmoire(step['casier'], map_armoire, armoire['casiers'][step['casier'][0] * 8 + step['casier'][1]]['objet'])
                 drawMapArmoire(canvas_armoire, map_armoire, armoire['emotions'], step["casier"])
+
+                root.update()
+                root.after(DELAI_AFFICHAGE * 5) 
             else:
                 map, perçues = updateMap(step['position'], step['perception'], map)
                 drawMap(canvas, map, perçues, resident)

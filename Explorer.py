@@ -19,7 +19,7 @@ class Explorer:
         self.tab_marquage = []
         self.chemin = []
         #On initialise une carte de la bonne taille
-        self.carte_mental =[["#" if x == 0 or y == 0 or x == tailleCarte["hauuteur"]-1 or y == tailleCarte["lageur"]-1 else "?" for y in range(tailleCarte["largeur"])]for x in range(tailleCarte["hauteur"])]
+        self.carte_mental =[["#" if x == 0 or y == 0 or x == tailleCarte["hauteur"]-1 or y == tailleCarte["largeur"]-1 else "?" for y in range(tailleCarte["largeur"])]for x in range(tailleCarte["hauteur"])]
         self.is_finish = False
 
         self.pos = None
@@ -72,7 +72,7 @@ class Explorer:
                 self.chemin = []
         if not pile and not self.chemin:#si pile vide et route vide, alors on a fini
             self.is_finish = True
-            return ["ATTENDRE", None]
+            return ["ATTENDRE", ""]
         # on retire de la pile les cases déjà visitées
         pile[:] = [p for p in pile if p not in tab_marquage]
         # on cherche le plus court chemin parmi toutes les cibles possibles
@@ -86,6 +86,6 @@ class Explorer:
 
         if not meilleur:                    # plus rien à explorer
             self.is_finish = True
-            return ["ATTENDRE", None]
+            return ["ATTENDRE", ""]
 
         return direction(pos, meilleur[1])# meilleur[0] est pos 

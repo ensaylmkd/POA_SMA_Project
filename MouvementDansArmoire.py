@@ -1,7 +1,26 @@
+emotions = [
+        "joie",
+        "confiance",
+        "peur",
+        "surprise",
+        "tristesse",
+        "degout",
+        "colere",
+        "anticipation"
+    ]
+intensites = [
+    "faible",
+    "moyenne",
+    "forte"
+]
+
 class MouvementDansArmoire:
     def __init__(self, agent, posDepart, emotionVoulu, intensiteVoulu):
         self.agent = agent
-        self.candidats = self.findCandidat(intensiteVoulu, emotionVoulu)
+
+        intensiteIndex = intensites.index(intensiteVoulu)
+        emotionIndex = emotions.index(emotionVoulu)
+        self.candidats = self.findCandidat(intensiteIndex, emotionIndex)
         self.bestcandidat = self.candidats.pop(0)
         self.mouvements = self.deplacerDansArmoire(posDepart,self.bestcandidat)
         
@@ -63,7 +82,7 @@ class MouvementDansArmoire:
         if self.mouvements == []:
             self.objetVu = self.agent.newinfo['contenu_casier']['objet']
             self.posCurseur = self.agent.newinfo['posCasier']
-            if self.candidats != []:
+            if self.objetVu is None and self.candidats:
                 candidatTraite = self.candidats.pop(0)
                 self.mouvements = self.deplacerDansArmoire(self.posCurseur, candidatTraite)
 
@@ -80,26 +99,10 @@ class MouvementDansArmoire:
                 self.repli = 'voisine_' + str(abs(self.bestcandidat[0] - self.posCurseur[0]))
 
             self.casierChoisi = self.posCurseur
+            return ["PRENDRE", self.objetVu]
         else:
             self.repli = 'armoire vide'
-            
-        return ["PRENDRE", self.objetVu]
-
-emotions = [
-        "joie",
-        "confiance",
-        "peur",
-        "surprise",
-        "tristesse",
-        "degout",
-        "colere",
-        "anticipation"
-    ]
-intensites = [
-    "faible",
-    "moyenne",
-    "forte"
-]
+            return ["PRENDRE", ""]
 
 def getPossibleObjects(armoire, emotion, intensite):
     intensiteIndex = intensites.index(intensite)

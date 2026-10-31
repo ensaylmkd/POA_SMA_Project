@@ -61,12 +61,8 @@ def main(argv):
             print(env.grid[i])
 
     printMap()
-    for i in range(7):
-        print("carte", i+1)
+    for i in range(300):
         env.timeStep()
-        printMap()
-        print(env.get_perception(0))
-        print(env.agentsInventory)
     
     trace.ecrire(chemin_sortie)
     print(f"\ntrace ecrite : {chemin_sortie}")

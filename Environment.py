@@ -66,6 +66,8 @@ class Environment:
     # =================== Trace ================================================
     def traceLivraisonAgent(self,IDAgent):
         data = self.get_demandeAllInfoFromIDAgent(IDAgent)
+        data['repli'] = "aucun" # Lucas : ca plante sinon
+        data['motif_echec'] = "oui"
         self.trace.ajouter_livraison(self.agentsDemandesData[IDAgent][0],
                                     data["demande"]["resident"],
                                     data["InfoDico"][1],
@@ -88,7 +90,7 @@ class Environment:
         """ Donne la vision N S E O de la grille à la pos @x,@y
         return {"N":N, "S":S, "E":E,"O":O} """
         hauteur,largeur = self.carte["dimensions"].values()
-        if (x >= hauteur and x > 0) or (y >= largeur and y > 0) :
+        if (x > hauteur and x >= 0) or (y > largeur and y >= 0): # Lucas : cest ente 0 et 2 | 0 et 7
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
         N = self.grid[x-1][y]
@@ -105,7 +107,7 @@ class Environment:
 
     def get_item(self,x,y):
         """renvoie l'objet de l'armoire en position @x,@y"""
-        if (x >= 3 and x > 0) or (y >= 8 and y > 0) :
+        if (x >= 3 and x > 0) or (y >= 8 and y > 0): # Lucas : cest ente 0 et 2 | 0 et 7
             print("[ENVIRONMENT][get_perception][error] x or y out of range")
             return None
         return self.casiers[x][y]
@@ -310,7 +312,7 @@ class Environment:
     def donnerAgent(self,IDAgent):
         def is_valideItem(IDAgent,item):
             data = self.get_demandeAllInfoFromIDAgent(IDAgent)
-            return item in data["PossibleObjects"].keys()
+            return item['objet'] in data["PossibleObjects"].keys() # Lucas : mdr tu avais mis que item alors que item cest {'emotion': 'tristesse', 'intensite': 'moyenne', 'objet': 'couverture'}
         
         def updateData(IDAgent,item):
             data = self.get_demandeAllInfoFromIDAgent(IDAgent)
@@ -324,11 +326,13 @@ class Environment:
                 self.demandes[i]["succes"] = True
                 self.commentaire = "L'agent a livré l'objet. Le résident est satisfait"
             else:
-                self.demandes[i]["motif_echec"] = self.agents.errorMsg if self.agents.errorMsg is not None else "l'agent s'est trompé d'objet"
+                #self.demandes[i]["motif_echec"] = self.agents.errorMsg if self.agents.errorMsg is not None else "l'agent s'est trompé d'objet" # Lucas : ca marche pas errorMsg
                 self.commentaire = "L'agent a livré l'objet. Le résident commence a pleuré (pas le bon objet)."
             
         target = self.get_demandeAllInfoFromIDAgent(IDAgent)["demande"]["resident"]
-        if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():
+        ## Lucas : GROS PROBLEME YASSINE (en vrai pas autant juste target cest R1 ... mais dans la perception cest P pour tous les residents, moi j'ai fait un check dans case livraison de l'agent)
+        # if target not in self.get_NeuMannVisionBYidAgent(IDAgent).values():  (ta ligne)
+        if 'P' not in self.get_NeuMannVisionBYidAgent(IDAgent).values(): 
             print("[DonnerAgent]ERROR: L'agent",IDAgent," n'est à porter du resident",target)
             self.commentaire = "L'agent n'est pas à porter du résident à qui il doit livrer.("+target+")"
         elif self.agentsInventory[IDAgent] is None:
