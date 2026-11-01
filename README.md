@@ -95,6 +95,9 @@ pour son état actuel.
 
 ## Vidéo
 
-`demo.mp4` (ou le lien), également déclarée dans `rendu.json`.
+`demo.mp4`
 
-*Le fichier vidéo n'est pas encore dans l'archive. Ajoutez-le, ou remplacez par l'URL, et gardez `rendu.json` cohérent.*
+## github
+
+https://github.com/ensaylmkd/POA_SMA_Project
+
