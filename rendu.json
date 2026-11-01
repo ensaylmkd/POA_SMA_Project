@@ -3,7 +3,7 @@
   "version": 1,
   "equipe": ["FAURON Quentin","LAMKADDEM Yassine", "THOMAS Lucas"],
   "langage": "Python 3",
-  "preparation": [],
-  "commande": ["python", "agent.py"],
+  "preparation": ["python3", "main.py" ,"cartes/appartement_05.json", "scenarios/scenario_05.json", "donnees", "sorties/trace_FLT.json"],
+  "commande": ["./affichage.py","sorties/trace_test.json"],
   "video": "demo.mp4"
 }
